@@ -60,6 +60,10 @@ class Settings():
         self.button_font_size = 48
         self.button_font_name = None
 
+        # Menu settings
+        self.menu_new_game_button_text = "Новая игра"
+        self.menu_exit_button_text = "Выход"
+
         self.initialize_dynamic_settings()
 
     def initialize_dynamic_settings(self):
