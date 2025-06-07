@@ -77,7 +77,13 @@ class AlienInvasion:
             if event.type == pygame.QUIT:
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                self._check_keydown_events(event)
+                if event.key == pygame.K_p: # Pause toggle
+                    if self.game_state == self.STATE_PLAYING:
+                        self.game_state = self.STATE_PAUSED
+                    elif self.game_state == self.STATE_PAUSED:
+                        self.game_state = self.STATE_PLAYING
+                else: # Handle other keydown events only if not 'P' or if 'P' didn't handle it
+                    self._check_keydown_events(event) # Gameplay related key events
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -92,17 +98,10 @@ class AlienInvasion:
                         sys.exit()
                 # Add other MOUSEBUTTONDOWN checks for other states if needed (e.g. pause screen buttons)
 
-            # State-specific event processing for other event types (like KEYDOWN for pause)
-            if self.game_state == self.STATE_PAUSED:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_p: # Assuming 'P' to unpause/pause
-                        # Placeholder for pause toggle logic
-                        # if self.game_state == self.STATE_PAUSED:
-                        #     self.game_state = self.STATE_PLAYING
-                        # elif self.game_state == self.STATE_PLAYING: # Should be handled in _check_keydown_events
-                        #     self.game_state = self.STATE_PAUSED
-                        pass
+            # Removed the separate state-specific event processing for K_p here, as it's integrated above.
             # Menu state specific KEYDOWN events (e.g. navigating menu with keys) could go here or in _check_keydown_events
+            # if self.game_state == self.STATE_MENU:
+            #     pass # Example: self._check_menu_keydown(event)
 
     # def _check_play_button(self, mouse_pos): # Метод удален
     #     """Запускает новую игру при нажатии кнопки Play"""
@@ -289,9 +288,16 @@ class AlienInvasion:
             self.new_game_button.draw_button()
             self.exit_button.draw_button()
         elif self.game_state == self.STATE_PAUSED:
-            # self.pause_message.draw() # Example: draw a "Paused" message
-            pass
-            # Potentially draw the game screen dimmed underneath
+            pause_text = "Пауза"
+            # Используем шрифт и цвет из scoreboard для консистентности, или можно задать свои в settings
+            pause_image = self.sb.font.render(pause_text, True,
+                                              self.settings.scoreboard_text_color,
+                                              None) # None для прозрачного фона текста
+            screen_rect = self.screen.get_rect() # Получаем screen_rect здесь, если он еще не атрибут класса
+            pause_rect = pause_image.get_rect(center=screen_rect.center)
+            self.screen.blit(pause_image, pause_rect)
+            # Игровые элементы (корабль, пришельцы, пули, счет) уже отрисованы до этого блока,
+            # поэтому они останутся видимыми, но замороженными.
 
         pygame.display.flip()
 
