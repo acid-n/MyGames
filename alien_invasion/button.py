@@ -37,6 +37,8 @@ class Button():
     def draw_button(self):
         # Отображение пустой кнопки и вывод сообщения
         self.screen.fill(self.button_color, self.rect)
+        # Убедимся, что текст всегда центрирован относительно текущей позиции rect кнопки
+        self.msg_image_rect.center = self.rect.center
         self.screen.blit(self.msg_image, self.msg_image_rect)
 
     def is_clicked(self, mouse_pos):
