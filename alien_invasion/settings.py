@@ -1,3 +1,8 @@
+import os
+
+_SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
+_IMAGES_DIR = os.path.join(_SETTINGS_DIR, 'images')
+
 class Settings():
     """Класс для хранения всех настроек игры Alien Invasion"""
 
@@ -38,8 +43,8 @@ class Settings():
         self.alien_vertical_spacing_factor = 2.0
 
         # Resource paths
-        self.ship_image_path = 'images/ship.bmp'
-        self.alien_image_path = 'images/alien.bmp'
+        self.ship_image_path = os.path.join(_IMAGES_DIR, 'ship.bmp')
+        self.alien_image_path = os.path.join(_IMAGES_DIR, 'alien.bmp')
 
         # Scoreboard settings
         self.scoreboard_text_color = (30, 30, 30)
