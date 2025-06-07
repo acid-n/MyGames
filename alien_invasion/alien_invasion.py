@@ -64,31 +64,40 @@ class AlienInvasion:
         """Запускает новую игру при нажатии кнопки Play"""
         button_clicked = self.play_button.rect.collidepoint(mouse_pos)
         if button_clicked and not self.stats.game_active:
-            # Сборос игровой статистики
-            self.settings.initialize_dynamic_settings()
-            self.stats.reset_stats()
-            self.stats.game_active = True
-            self.sb.prep_score()
-            self.sb.prep_level()
-            self.sb.prep_ships()
-            # Очистка списков пришельцев и снарядов
-            self.aliens.empty()
-            self.bullets.empty()
-            # Создание нового флота и размещение корабля в центре
-            self._create_fleet()
-            self.ship.center_ship()
-            # Указатель мыши скрывается
-            pygame.mouse.set_visible(False)
+            self._start_new_game()
+
+    def _start_new_game(self):
+        """Начинает новую игру."""
+        # Сборос игровой статистики
+        self.settings.initialize_dynamic_settings()
+        self.stats.reset_stats()
+        self.stats.game_active = True
+        self.sb.prep_score()
+        self.sb.prep_level()
+        self.sb.prep_ships()
+        # Сброс элементов раунда
+        self._reset_round_elements()
+        # Указатель мыши скрывается
+        pygame.mouse.set_visible(False)
+
+    def _reset_round_elements(self):
+        """Сбрасывает элементы, которые меняются каждый раунд/жизнь."""
+        # Очистка списков пришельцев и снарядов
+        self.aliens.empty()
+        self.bullets.empty()
+        # Создание нового флота и размещение корабля в центре
+        self._create_fleet()
+        self.ship.center_ship()
 
     def _check_keydown_events(self, event):
         """Реагирует на нажатие клавиш"""
-        if event.key == pygame.K_RIGHT:
+        if event.key == pygame.K_RIGHT and self.stats.game_active:
             self.ship.moving_right = True
-        elif event.key == pygame.K_LEFT:
+        elif event.key == pygame.K_LEFT and self.stats.game_active:
             self.ship.moving_left = True
         elif event.key == pygame.K_q:
             sys.exit()
-        elif event.key == pygame.K_SPACE:
+        elif event.key == pygame.K_SPACE and self.stats.game_active:
             self._fire_bullet()
 
     def _check_keyup_events(self, event):
@@ -170,12 +179,8 @@ class AlienInvasion:
             # Уменьшение ships_left и обновление панели счета
             self.stats.ships_left -= 1
             self.sb.prep_ships()
-            # Очистка списков пришельцев и снарядов
-            self.aliens.empty()
-            self.bullets.empty()
-            # Создание нового флота и размещение корабля в центре
-            self._create_fleet()
-            self.ship.center_ship()
+            # Сброс элементов раунда
+            self._reset_round_elements()
             # Пауза
             sleep(0.5)
         else:
