@@ -43,9 +43,12 @@ class AlienInvasion:
         self.exit_button = Button(self, self.settings.menu_exit_button_text)
 
         # Позиционирование кнопок меню
+        # Position "New Game" button centered on the screen
         self.new_game_button.rect.center = self.screen.get_rect().center
-        self.exit_button.rect.midtop = self.new_game_button.rect.midbottom
-        self.exit_button.rect.y += 20 # Добавляем небольшой отступ
+
+        # Position "Exit" button centered horizontally, and below "New Game" button with a 20px gap
+        self.exit_button.rect.centerx = self.screen.get_rect().centerx
+        self.exit_button.rect.top = self.new_game_button.rect.bottom + 20
 
         # _create_fleet() будет вызываться в _start_new_game(), а не при инициализации
         # self._create_fleet() # Убрано отсюда
