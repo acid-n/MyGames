@@ -14,8 +14,8 @@ class Scoreboard():
         self.stats = ai_game.stats
 
         # Настройки шрифта для вывода счета
-        self.text_color = (30, 30, 30)
-        self.font = pygame.font.SysFont(None, 48)
+        self.text_color = self.settings.scoreboard_text_color
+        self.font = pygame.font.SysFont(self.settings.scoreboard_font_name, self.settings.scoreboard_font_size)
         # Подготовка изображений счетов
         self.prep_score()
         self.prep_high_score()
@@ -30,8 +30,8 @@ class Scoreboard():
 
         # Вывод счета в правой верхней части экрана
         self.score_rect = self.score_image.get_rect()
-        self.score_rect.right = self.screen_rect.right - 20
-        self.score_rect.top = 20
+        self.score_rect.right = self.screen_rect.right - self.settings.score_padding_right
+        self.score_rect.top = self.settings.score_padding_top
 
     def prep_high_score(self):
         """Преобразует рекордный счет в графическое изображение"""
@@ -52,15 +52,15 @@ class Scoreboard():
         # Уровень выводится под текущим счетом
         self.level_rect = self.level_image.get_rect()
         self.level_rect.right = self.score_rect.right
-        self.level_rect.top = self.score_rect.bottom + 10
+        self.level_rect.top = self.score_rect.bottom + self.settings.level_score_spacing
 
     def prep_ships(self):
         """Сообщает количество оставшихся кораблей"""
         self.ships = Group()
         for ship_number in range(self.stats.ships_left):
             ship = Ship(self.ai_game)
-            ship.rect.x = 10 + ship_number * ship.rect.width
-            ship.rect.y = 10
+            ship.rect.x = self.settings.lives_display_padding_left + ship_number * ship.rect.width
+            ship.rect.y = self.settings.lives_display_padding_top
             self.ships.add(ship)
 
     def check_high_score(self):
