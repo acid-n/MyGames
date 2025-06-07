@@ -14,6 +14,12 @@ from alien import Alien
 class AlienInvasion:
     """Класс для управления ресурсами и поведением игры"""
 
+    # Состояния игры
+    STATE_MENU = 'menu'
+    STATE_PLAYING = 'playing'
+    STATE_PAUSED = 'paused'
+    STATE_GAME_OVER = 'game_over'
+
     def __init__(self):
         """Инициализирует игру и создает игровые ресурсы"""
         pygame.init()
@@ -25,6 +31,8 @@ class AlienInvasion:
         # Создание экземпляра для хранения игровой статистики
         self.stats = GameStats(self)
         self.sb = Scoreboard(self)
+
+        self.game_state = self.STATE_GAME_OVER # Начальное состояние игры
 
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
@@ -40,10 +48,16 @@ class AlienInvasion:
         while True:
             self._check_events()
 
-            if self.stats.game_active:
+            if self.game_state == self.STATE_PLAYING:
                 self.ship.update()
                 self._update_bullets()
                 self._update_aliens()
+            elif self.game_state == self.STATE_MENU:
+                # Placeholder for menu update logic (e.g., self._update_menu())
+                pass
+            elif self.game_state == self.STATE_PAUSED:
+                # Placeholder for pause screen update logic (e.g., self._update_pause_screen())
+                pass
 
             self._update_screen()
 
@@ -58,7 +72,26 @@ class AlienInvasion:
                 self._check_keyup_events(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
-                self._check_play_button(mouse_pos)
+                if self.game_state == self.STATE_GAME_OVER or self.game_state == self.STATE_MENU: # Assuming play button might be on menu too
+                    self._check_play_button(mouse_pos)
+                # Add other MOUSEBUTTONDOWN checks for other states if needed
+                # For example, clicking menu buttons in STATE_MENU
+
+            # State-specific event processing (could be more integrated above)
+            if self.game_state == self.STATE_MENU:
+                # self._check_menu_events(event) # Example call for more detailed menu event handling
+                pass
+            elif self.game_state == self.STATE_PAUSED:
+                # self._check_pause_events(event) # Example call
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p: # Assuming 'P' to unpause/pause
+                        # This is a simplified toggle, real implementation would be more robust
+                        # if self.game_state == self.STATE_PAUSED:
+                        #     self.game_state = self.STATE_PLAYING
+                        # elif self.game_state == self.STATE_PLAYING:
+                        #     self.game_state = self.STATE_PAUSED
+                        pass # Actual transition logic will be part of pause implementation
+                pass
 
     def _check_play_button(self, mouse_pos):
         """Запускает новую игру при нажатии кнопки Play"""
@@ -72,6 +105,7 @@ class AlienInvasion:
         self.settings.initialize_dynamic_settings()
         self.stats.reset_stats()
         self.stats.game_active = True
+        self.game_state = self.STATE_PLAYING # Установка активного состояния игры
         self.sb.prep_score()
         self.sb.prep_level()
         self.sb.prep_ships()
@@ -183,7 +217,8 @@ class AlienInvasion:
             # Пауза
             sleep(self.settings.ship_hit_pause_duration)
         else:
-            self.stats.game_active = False
+            self.stats.game_active = False # Keep game_active in sync
+            self.game_state = self.STATE_GAME_OVER
             pygame.mouse.set_visible(True)
 
     def _create_fleet(self):
@@ -238,9 +273,17 @@ class AlienInvasion:
         # Вывод информации о счете
         self.sb.show_score()
 
-        # Кнопка Play отображается в том случае, если игра неактивна
-        if not self.stats.game_active:
+        # Кнопка Play отображается в том случае, если игра в состоянии GAME_OVER
+        if self.game_state == self.STATE_GAME_OVER:
             self.play_button.draw_button()
+        elif self.game_state == self.STATE_MENU:
+            # self.menu.draw() # Example call to draw menu elements
+            # For now, we could draw the play button here too, or a different set of buttons
+            # self.play_button.draw_button() # Or specific menu buttons
+            pass
+        elif self.game_state == self.STATE_PAUSED:
+            # self.pause_message.draw() # Example: draw a "Paused" message
+            pass
 
         pygame.display.flip()
 
