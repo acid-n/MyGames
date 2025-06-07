@@ -33,7 +33,7 @@ class AlienInvasion:
         self._create_fleet()
 
         # Создание кнопки Play
-        self.play_button = Button(self, "Play")
+        self.play_button = Button(self, self.settings.play_button_text)
 
     def run_game(self):
         """Запуск основного цикла игры"""
@@ -62,7 +62,7 @@ class AlienInvasion:
 
     def _check_play_button(self, mouse_pos):
         """Запускает новую игру при нажатии кнопки Play"""
-        button_clicked = self.play_button.rect.collidepoint(mouse_pos)
+        button_clicked = self.play_button.is_clicked(mouse_pos)
         if button_clicked and not self.stats.game_active:
             self._start_new_game()
 
@@ -152,7 +152,6 @@ class AlienInvasion:
         """
         Проверяет, достиг ли флот края экрана,
         с последующим обновлением позиций всех пришельцев во флоте
-        :return:
         """
         self._check_fleet_edges()
         self.aliens.update()
@@ -182,7 +181,7 @@ class AlienInvasion:
             # Сброс элементов раунда
             self._reset_round_elements()
             # Пауза
-            sleep(0.5)
+            sleep(self.settings.ship_hit_pause_duration)
         else:
             self.stats.game_active = False
             pygame.mouse.set_visible(True)
@@ -193,13 +192,13 @@ class AlienInvasion:
         # Интервал между соседними пришельцами равен ширине пришельца
         alien = Alien(self)
         alien_width, alien_height = alien.rect.size
-        available_space_x = self.settings.screen_width - (2 * alien_width)
-        number_aliens_x = available_space_x // (2 * alien_width)
+        available_space_x = self.settings.screen_width - (self.settings.fleet_screen_margin_x_factor * alien_width)
+        number_aliens_x = int(available_space_x / (self.settings.alien_horizontal_spacing_factor * alien_width))
 
         """Определяет количество рядов, помещающихся на экране"""
         ship_height = self.ship.rect.height
-        available_space_y = (self.settings.screen_height - (3 * alien_height) - ship_height)
-        number_rows = available_space_y // (2 * alien_height)
+        available_space_y = (self.settings.screen_height - (self.settings.fleet_top_margin_factor * alien_height) - ship_height)
+        number_rows = int(available_space_y / (self.settings.alien_vertical_spacing_factor * alien_height))
 
         # Создание флота вторжения
         for row_number in range(number_rows):
@@ -210,9 +209,9 @@ class AlienInvasion:
         """Создание пришельца и размещение его в ряду"""
         alien = Alien(self)
         alien_width, alien_height = alien.rect.size
-        alien.x = alien_width + 2 * alien_width * alien_number
+        alien.x = alien_width + self.settings.alien_horizontal_spacing_factor * alien_width * alien_number
         alien.rect.x = alien.x
-        alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number
+        alien.rect.y = alien.rect.height + self.settings.alien_vertical_spacing_factor * alien.rect.height * row_number
         self.aliens.add(alien)
 
     def _check_fleet_edges(self):
