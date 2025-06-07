@@ -57,9 +57,11 @@ class Settings():
         self.lives_display_padding_top = 10
 
         # Button settings
-        self.play_button_text = "Play"
-        self.button_width = 200
-        self.button_height = 50
+        self.play_button_text = "Play" # Note: This might be unused now menu buttons have specific texts
+        # self.button_width = 200 # Removed for dynamic sizing
+        # self.button_height = 50 # Removed for dynamic sizing
+        self.button_padding_x = 40  # Total horizontal padding (20px on each side)
+        self.button_padding_y = 20  # Total vertical padding (10px on each side)
         self.button_color_default = (0, 255, 0)
         self.button_text_color_default = (255, 255, 255)
         self.button_font_size = 48
