@@ -29,7 +29,7 @@ class Button():
 
     def _prep_msg(self, msg):
         """Преобразует msg в графическое изображение."""
-        self.msg_image = self.font.render(msg, True, self.text_color, self.button_color)
+        self.msg_image = self.font.render(msg, True, self.text_color, None) # None for transparent text background
         self.msg_image_rect = self.msg_image.get_rect()
         # Убираем self.msg_image_rect.center = self.rect.center отсюда,
         # так как self.rect еще не имеет финальных размеров на этом этапе.

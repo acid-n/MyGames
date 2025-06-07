@@ -42,7 +42,7 @@ class Scoreboard():
         # Рекорд выравнивается по центру верхней стороны
         self.high_score_rect = self.high_score_image.get_rect()
         self.high_score_rect.centerx = self.screen_rect.centerx
-        self.high_score_rect.top = self.score_rect.top
+        self.high_score_rect.top = self.settings.score_padding_top # Используем общий отступ сверху
 
     def prep_level(self):
         """Преобразует уровень в графическое изображение"""
