@@ -12,6 +12,12 @@ from bullet import Bullet
 from alien import Alien
 from powerup import PowerUp
 import random
+import math # Импортируем math для floor, ceil, или других функций, если понадобятся. lerp определим сами.
+
+# Функция линейной интерполяции (Lerp)
+def lerp(start, end, t):
+    """Вычисляет линейную интерполяцию между start и end для данного t."""
+    return start + t * (end - start)
 
 class AlienInvasion:
     """Класс для управления ресурсами и поведением игры"""
@@ -56,6 +62,7 @@ class AlienInvasion:
         # self._create_fleet() # Убрано отсюда
 
         self.powerups = pygame.sprite.Group()
+        self.last_double_fire_spawn_time = 0 # Время последнего появления бонуса "Двойной выстрел"
 
     def run_game(self):
         """Запуск основного цикла игры"""
@@ -65,11 +72,25 @@ class AlienInvasion:
             if self.game_state == self.STATE_PLAYING:
                 self.ship.update()
                 self._update_bullets()
-                # Постепенное увеличение скорости пришельцев во время игры
-                if self.settings.alien_speed_current < self.settings.alien_speed_max:
-                    self.settings.alien_speed_current += self.settings.alien_speed_increase_rate
-                    # Убедимся, что текущая скорость не превышает максимальную
-                    self.settings.alien_speed_current = min(self.settings.alien_speed_current, self.settings.alien_speed_max)
+
+                # Динамическое изменение скорости пришельцев (DDA) на основе очков
+                progress_ratio = self.stats.score / self.settings.target_score_for_max_speed
+                progress_ratio_clamped = min(1.0, progress_ratio) # Ограничиваем progress_ratio значением 1.0
+
+                # Используем Lerp для вычисления текущей скорости
+                # Формула: clamped_speed = min_speed + progress_ratio_clamped * (max_speed - min_speed)
+                clamped_speed = lerp(self.settings.min_alien_speed,
+                                     self.settings.alien_speed_max,
+                                     progress_ratio_clamped)
+
+                # Дополнительно убедимся, что скорость находится в пределах min/max (хотя Lerp с clamped_ratio должен это гарантировать)
+                self.settings.alien_speed_current = min(max(clamped_speed, self.settings.min_alien_speed), self.settings.alien_speed_max)
+
+                # Старая логика увеличения скорости удалена:
+                # if self.settings.alien_speed_current < self.settings.alien_speed_max:
+                #     self.settings.alien_speed_current += self.settings.alien_speed_increase_rate
+                #     self.settings.alien_speed_current = min(self.settings.alien_speed_current, self.settings.alien_speed_max)
+
                 self._update_aliens()
                 self.powerups.update()
                 self._check_ship_powerup_collisions()
@@ -127,6 +148,7 @@ class AlienInvasion:
         self.stats.reset_stats()
         self.stats.game_active = True
         self.game_state = self.STATE_PLAYING # Установка активного состояния игры
+        self.last_double_fire_spawn_time = 0 # Сброс таймера кулдауна для "Двойного выстрела"
         self.sb.prep_score()
         self.sb.prep_level()
         self.sb.prep_ships()
@@ -209,22 +231,20 @@ class AlienInvasion:
                 for alien_hit in aliens_collided_list:
                     self.stats.score += self.settings.alien_points # Очки за пришельца
 
-                    # Логика появления бонусов
-                    # Решено использовать независимые шансы для каждого типа бонуса, но с приоритетом (elif)
-                    # current_spawn_roll = random.random() # Один бросок для определения, выпадет ли бонус вообще (если бы была общая вероятность)
+                    # Логика появления бонусов (теперь независимая для каждого типа)
 
                     # Логика появления бонуса "Щит"
                     if random.random() < self.settings.shield_spawn_chance:
                         shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
                         self.powerups.add(shield_powerup)
-                    # Логика появления бонуса "Двойной выстрел"
-                    # Используется 'elif', как указано в задаче. Это означает, что "Двойной выстрел"
-                    # имеет шанс появиться только если "Щит" не появился.
-                    # Это делает фактический шанс появления "Двойного выстрела" ниже, чем self.settings.double_fire_spawn_chance,
-                    # так как он зависит от того, что "Щит" не выпал: (1 - shield_spawn_chance) * double_fire_spawn_chance.
-                    elif random.random() < self.settings.double_fire_spawn_chance:
-                        df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
-                        self.powerups.add(df_powerup)
+
+                    # Логика появления бонуса "Двойной выстрел" с кулдауном
+                    current_time = pygame.time.get_ticks()
+                    if (current_time - self.last_double_fire_spawn_time) > self.settings.double_fire_min_cooldown:
+                        if random.random() < self.settings.double_fire_spawn_chance:
+                            df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
+                            self.powerups.add(df_powerup)
+                            self.last_double_fire_spawn_time = current_time # Обновляем время последнего появления
 
                     # Нет break, поэтому если пуля попадает в нескольких пришельцев, каждый имеет шанс выбросить бонус
                     # и каждый дает очки.
