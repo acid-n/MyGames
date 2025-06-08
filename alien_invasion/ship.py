@@ -35,9 +35,9 @@ class Ship(Sprite):
         self.shield_active = False
         self.shield_end_time = 0
 
-        # Атрибуты двойного огня
-        self.double_fire_active = False
-        self.double_fire_end_time = 0
+        # Атрибуты двойного огня (Double Fire)
+        self.double_fire_active = False # Флаг активности двойного огня
+        self.double_fire_end_time = 0   # Время окончания действия двойного огня
 
     def activate_shield(self):
         """Активирует щит на корабле на определенное время."""
@@ -68,7 +68,7 @@ class Ship(Sprite):
             # Возможно, добавить звуковой эффект или визуальное подтверждение деактивации двойного огня
 
     def activate_double_fire(self):
-        """Активирует режим двойного огня на определенное время."""
+        """Активирует режим двойного огня (Double Fire) на определенное время."""
         self.double_fire_active = True
         self.double_fire_end_time = pygame.time.get_ticks() + self.settings.double_fire_duration
         # Возможно, добавить звуковой эффект или визуальное подтверждение активации
