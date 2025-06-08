@@ -33,6 +33,7 @@ class Alien(Sprite):
             return True
 
     def update(self):
-        """Перемещает пришельца вправо"""
-        self.x += (self.settings.alien_speed * self.settings.fleet_direction)
+        """Перемещает пришельца вправо или влево в зависимости от fleet_direction""" # Updated comment
+        # Используем alien_speed_current для определения скорости пришельца
+        self.x += (self.settings.alien_speed_current * self.settings.fleet_direction)
         self.rect.x = self.x

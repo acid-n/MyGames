@@ -12,27 +12,26 @@ class PowerUp(Sprite):
         self.settings = ai_game.settings
         self.powerup_type = powerup_type # e.g., 'shield'
 
-        # Размеры и свойства бонуса (пока только для 'shield')
+        # Размеры и свойства бонуса в зависимости от типа
         if self.powerup_type == 'shield':
             self.width = self.settings.shield_powerup_width
             self.height = self.settings.shield_powerup_height
             self.color = self.settings.shield_powerup_color
             self.speed = self.settings.shield_powerup_speed
-        # else:
-            # Можно добавить другие типы бонусов здесь
-            # self.width = 0 # или значения по умолчанию
-            # self.height = 0
-            # self.color = (0,0,0)
-            # self.speed = 0
+        elif self.powerup_type == 'double_fire': # Новый тип бонуса "Двойной огонь"
+            self.width = self.settings.double_fire_powerup_width
+            self.height = self.settings.double_fire_powerup_height
+            self.color = self.settings.double_fire_powerup_color
+            self.speed = self.settings.double_fire_powerup_speed
+        else:
+            # Тип бонуса неизвестен, используем значения по умолчанию или вызываем ошибку
+            print(f"Warning: Unknown powerup_type '{self.powerup_type}'. Using default visual properties.")
+            self.width = 10 # Значение по умолчанию
+            self.height = 10 # Значение по умолчанию
+            self.color = (128, 128, 128) # Серый цвет по умолчанию
+            self.speed = 0.5 # Медленная скорость по умолчанию
 
         # Создание поверхности и rect для бонуса
-        # Убедимся, что width и height инициализированы, даже если тип неизвестен (хотя бы в 0)
-        if not hasattr(self, 'width'): # Если тип не 'shield' и нет других else if
-            self.width = 0
-            self.height = 0
-            self.color = (0,0,0) # Черный по умолчанию, если не задан
-            self.speed = 0 # Не будет двигаться, если не задана скорость
-
         self.image = pygame.Surface((self.width, self.height))
         self.image.fill(self.color)
         self.rect = self.image.get_rect()

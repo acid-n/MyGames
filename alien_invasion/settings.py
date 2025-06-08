@@ -21,11 +21,15 @@ class Settings():
         self.bullet_speed = 1.5
         self.bullet_width = 3
         self.bullet_height = 15
-        self.bullet_color = (255, 255, 0) # Bright yellow for better visibility
+        self.bullet_color = (255, 0, 0) # Bright red
         self.bullets_allowed = 100      # More bullets allowed
 
         # Настройки пришельцев
-        self.alien_speed = 1.0
+        # self.alien_speed = 1.0 # Replaced by alien_speed_current, _initial, _max, _increase_rate
+        self.alien_speed_initial = 0.5  # Starting speed for aliens
+        self.alien_speed_current = self.alien_speed_initial # Current alien speed, increases gradually
+        self.alien_speed_max = 3.0      # Maximum speed for aliens
+        self.alien_speed_increase_rate = 0.0001 # How much alien speed increases per game loop in play state
         self.fleet_drop_speed = 10
 
         # Темп ускорения игры
@@ -74,18 +78,29 @@ class Settings():
         self.menu_new_game_button_text = "Новая игра"
         self.menu_exit_button_text = "Выход"
 
-        # Power-up Settings (Shield as the first example)
-        self.shield_duration = 5000  # milliseconds (5 seconds)
-        self.powerup_spawn_chance = 0.1  # 10% chance per destroyed alien (example logic)
+        # Power-up Settings
+        # General spawn chance for any power-up (can be refined later if needed)
+        self.powerup_general_spawn_chance = 0.1 # Example: 10% chance for A power-up to spawn
 
+        # Shield Power-up
+        self.shield_duration = 5000  # milliseconds (5 seconds)
+        self.shield_spawn_chance = 0.1  # Specific chance if chosen from general spawn, or independent. Current plan: independent.
         # Shield Power-up item visual properties
         self.shield_powerup_color = (0, 0, 255)  # Blue
         self.shield_powerup_width = 15
         self.shield_powerup_height = 15
         self.shield_powerup_speed = 1.0 # Speed at which the power-up item falls
-
         # Ship's shield visual effect
         self.ship_shield_outline_color = (0, 191, 255)  # Deep sky blue
+
+        # Double Fire Power-up
+        self.double_fire_duration = 10000  # ms (10 seconds)
+        self.double_fire_spawn_chance = 0.08 # 8% chance, slightly less than shield
+        # Double Fire Power-up item visual properties
+        self.double_fire_powerup_color = (255, 165, 0)  # Orange
+        self.double_fire_powerup_width = 15
+        self.double_fire_powerup_height = 15
+        self.double_fire_powerup_speed = 1.0 # Speed at which the power-up item falls
 
         self.initialize_dynamic_settings()
 
@@ -94,7 +109,8 @@ class Settings():
         # Reset speed settings to their initial values
         self.ship_speed = 1.5
         self.bullet_speed = 1.5
-        self.alien_speed = 1.0
+        # self.alien_speed = 1.0 # Removed, now handled by alien_speed_current being reset to alien_speed_initial
+        self.alien_speed_current = self.alien_speed_initial # Reset current speed to initial for the new game/level
 
         # fleet_direction = 1 обозначает движение вправо, а -1 влево
         self.fleet_direction = 1
@@ -106,7 +122,12 @@ class Settings():
         """Увеличивает настройки скорости и стоимость пришельцев"""
         self.ship_speed *= self.speedup_scale
         self.bullet_speed *= self.speedup_scale
-        self.alien_speed *= self.speedup_scale
+        # self.alien_speed *= self.speedup_scale # Now increases alien_speed_initial for next level
+        self.alien_speed_initial *= self.speedup_scale # Increase base speed for the next level
+        # Ensure alien_speed_initial does not exceed alien_speed_max after increase.
+        # Though, current logic implies alien_speed_current is the one capped by alien_speed_max during gameplay.
+        # Consider if alien_speed_initial should also be capped or if speedup_scale is managed to prevent excessive initial speeds.
+
 
         self.alien_points = int(self.alien_points * self.score_scale)
 
@@ -114,6 +135,6 @@ class Settings():
         print(f"--- Speed Increased ---")
         print(f"New ship speed: {self.ship_speed:.2f}")
         print(f"New bullet speed: {self.bullet_speed:.2f}")
-        print(f"New alien speed: {self.alien_speed:.2f}")
+        print(f"New initial alien speed for next level: {self.alien_speed_initial:.2f}") # Updated log message
         print(f"New alien points: {self.alien_points}")
         print(f"-----------------------")
