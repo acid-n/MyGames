@@ -63,6 +63,7 @@ class AlienInvasion:
 
         self.powerups = pygame.sprite.Group()
         self.last_double_fire_spawn_time = 0 # Время последнего появления бонуса "Двойной выстрел"
+        self.level_start_time = 0 # Время начала текущего уровня (в тиках)
 
     def run_game(self):
         """Запуск основного цикла игры"""
@@ -73,23 +74,11 @@ class AlienInvasion:
                 self.ship.update()
                 self._update_bullets()
 
-                # Динамическое изменение скорости пришельцев (DDA) на основе очков
-                progress_ratio = self.stats.score / self.settings.target_score_for_max_speed
-                progress_ratio_clamped = min(1.0, progress_ratio) # Ограничиваем progress_ratio значением 1.0
-
-                # Используем Lerp для вычисления текущей скорости
-                # Формула: clamped_speed = min_speed + progress_ratio_clamped * (max_speed - min_speed)
-                clamped_speed = lerp(self.settings.min_alien_speed,
-                                     self.settings.alien_speed_max,
-                                     progress_ratio_clamped)
-
-                # Дополнительно убедимся, что скорость находится в пределах min/max (хотя Lerp с clamped_ratio должен это гарантировать)
-                self.settings.alien_speed_current = min(max(clamped_speed, self.settings.min_alien_speed), self.settings.alien_speed_max)
-
-                # Старая логика увеличения скорости удалена:
-                # if self.settings.alien_speed_current < self.settings.alien_speed_max:
-                #     self.settings.alien_speed_current += self.settings.alien_speed_increase_rate
-                #     self.settings.alien_speed_current = min(self.settings.alien_speed_current, self.settings.alien_speed_max)
+                # New DDA logic based on per-level increase rate and max speed
+                if hasattr(self.settings, 'alien_speed_increase_rate') and hasattr(self.settings, 'alien_speed_max_level'):
+                    if self.settings.alien_speed_current < self.settings.alien_speed_max_level:
+                        self.settings.alien_speed_current += self.settings.alien_speed_increase_rate
+                        self.settings.alien_speed_current = min(self.settings.alien_speed_current, self.settings.alien_speed_max_level)
 
                 self._update_aliens()
                 self.powerups.update()
@@ -144,11 +133,12 @@ class AlienInvasion:
     def _start_new_game(self):
         """Начинает новую игру."""
         # Сборос игровой статистики
-        self.settings.initialize_dynamic_settings()
-        self.stats.reset_stats()
+        self.stats.reset_stats() # Reset stats first so self.stats.level is 1
+        self.settings.initialize_dynamic_settings(self.stats.level) # Load settings for level 1
         self.stats.game_active = True
         self.game_state = self.STATE_PLAYING # Установка активного состояния игры
         self.last_double_fire_spawn_time = 0 # Сброс таймера кулдауна для "Двойного выстрела"
+        self.level_start_time = pygame.time.get_ticks() # Установка времени начала уровня
         self.sb.prep_score()
         self.sb.prep_level()
         self.sb.prep_ships()
@@ -231,20 +221,30 @@ class AlienInvasion:
                 for alien_hit in aliens_collided_list:
                     self.stats.score += self.settings.alien_points # Очки за пришельца
 
-                    # Логика появления бонусов (теперь независимая для каждого типа)
+                    # --- Логика появления бонусов ---
+                    current_game_time = pygame.time.get_ticks()
 
-                    # Логика появления бонуса "Щит"
-                    if random.random() < self.settings.shield_spawn_chance:
-                        shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
-                        self.powerups.add(shield_powerup)
+                    # 1. Проверка общего минимального времени в уровне для появления бонусов
+                    if hasattr(self.settings, 'current_powerup_general_min_level_time') and \
+                       (current_game_time - self.level_start_time) < self.settings.current_powerup_general_min_level_time:
+                        pass # Слишком рано в уровне для бонусов, ничего не делаем
+                    else:
+                        # 2. Логика появления бонуса "Щит"
+                        if hasattr(self.settings, 'current_shield_spawn_chance') and \
+                           self.settings.current_shield_spawn_chance > 0:
+                            if random.random() < self.settings.current_shield_spawn_chance:
+                                shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
+                                self.powerups.add(shield_powerup)
 
-                    # Логика появления бонуса "Двойной выстрел" с кулдауном
-                    current_time = pygame.time.get_ticks()
-                    if (current_time - self.last_double_fire_spawn_time) > self.settings.double_fire_min_cooldown:
-                        if random.random() < self.settings.double_fire_spawn_chance:
-                            df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
-                            self.powerups.add(df_powerup)
-                            self.last_double_fire_spawn_time = current_time # Обновляем время последнего появления
+                        # 3. Логика появления бонуса "Двойной выстрел"
+                        if hasattr(self.settings, 'current_double_fire_spawn_chance') and \
+                           hasattr(self.settings, 'current_double_fire_min_cooldown') and \
+                           self.settings.current_double_fire_spawn_chance > 0:
+                            if (current_game_time - self.last_double_fire_spawn_time) > self.settings.current_double_fire_min_cooldown:
+                                if random.random() < self.settings.current_double_fire_spawn_chance:
+                                    df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
+                                    self.powerups.add(df_powerup)
+                                    self.last_double_fire_spawn_time = current_game_time # Обновляем время последнего появления
 
                     # Нет break, поэтому если пуля попадает в нескольких пришельцев, каждый имеет шанс выбросить бонус
                     # и каждый дает очки.
@@ -260,6 +260,9 @@ class AlienInvasion:
             # Увеличение уровня
             self.stats.level += 1
             self.sb.prep_level()
+            # Load settings for the new level
+            self.settings.load_level_settings(self.stats.level)
+            self.level_start_time = pygame.time.get_ticks() # Сброс времени начала уровня
 
     def _update_aliens(self):
         """
@@ -313,28 +316,38 @@ class AlienInvasion:
         """Создание флота вторжения"""
         # Создание пришельца и вычисление количества пришельцев в ряду
         # Интервал между соседними пришельцами равен ширине пришельца
-        alien = Alien(self)
+        alien = Alien(self) # Dummy alien for dimensions
         alien_width, alien_height = alien.rect.size
-        available_space_x = self.settings.screen_width - (self.settings.fleet_screen_margin_x_factor * alien_width)
-        number_aliens_x = int(available_space_x / (self.settings.alien_horizontal_spacing_factor * alien_width))
 
-        """Определяет количество рядов, помещающихся на экране"""
+        # Calculate initial numbers based on screen space and default spacing
+        initial_available_space_x = self.settings.screen_width - (self.settings.fleet_screen_margin_x_factor * alien_width)
+        initial_number_aliens_x = int(initial_available_space_x / (self.settings.alien_horizontal_spacing_factor * alien_width))
+
         ship_height = self.ship.rect.height
-        available_space_y = (self.settings.screen_height - (self.settings.fleet_top_margin_factor * alien_height) - ship_height)
-        number_rows = int(available_space_y / (self.settings.alien_vertical_spacing_factor * alien_height))
+        initial_available_space_y = (self.settings.screen_height - (self.settings.fleet_top_margin_factor * alien_height) - ship_height)
+        initial_number_rows = int(initial_available_space_y / (self.settings.alien_vertical_spacing_factor * alien_height))
 
-        # Создание флота вторжения
+        # Apply level-specific factors
+        number_aliens_x = int(initial_number_aliens_x * self.settings.current_aliens_per_row_factor)
+        number_rows = int(initial_number_rows * self.settings.current_alien_rows_factor)
+
+        # Add safeguards
+        number_aliens_x = max(1, number_aliens_x)
+        number_rows = max(1, number_rows)
+
+        # Создание флота вторжения using the calculated numbers
         for row_number in range(number_rows):
             for alien_number in range(number_aliens_x):
-                self._create_alien(alien_number, row_number)
+                self._create_alien(alien_number, row_number, alien_width, alien_height) # Pass alien_width, alien_height
 
-    def _create_alien(self, alien_number, row_number):
+    def _create_alien(self, alien_number, row_number, alien_width, alien_height): # Accept alien_width, alien_height
         """Создание пришельца и размещение его в ряду"""
         alien = Alien(self)
-        alien_width, alien_height = alien.rect.size
+        # alien_width, alien_height = alien.rect.size # Not needed if passed as args
         alien.x = alien_width + self.settings.alien_horizontal_spacing_factor * alien_width * alien_number
         alien.rect.x = alien.x
-        alien.rect.y = alien.rect.height + self.settings.alien_vertical_spacing_factor * alien.rect.height * row_number
+        # Corrected y position calculation to use alien_height consistently
+        alien.rect.y = alien_height + self.settings.alien_vertical_spacing_factor * alien_height * row_number
         self.aliens.add(alien)
 
     def _check_fleet_edges(self):
