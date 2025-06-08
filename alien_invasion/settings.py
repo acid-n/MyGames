@@ -21,8 +21,8 @@ class Settings():
         self.bullet_speed = 1.5
         self.bullet_width = 3
         self.bullet_height = 15
-        self.bullet_color = (60, 60, 60)
-        self.bullets_allowed = 3
+        self.bullet_color = (0, 255, 0) # Green bullets
+        self.bullets_allowed = 100      # More bullets allowed
 
         # Настройки пришельцев
         self.alien_speed = 1.0
@@ -109,3 +109,11 @@ class Settings():
         self.alien_speed *= self.speedup_scale
 
         self.alien_points = int(self.alien_points * self.score_scale)
+
+        # Логирование изменения скорости
+        print(f"--- Speed Increased ---")
+        print(f"New ship speed: {self.ship_speed:.2f}")
+        print(f"New bullet speed: {self.bullet_speed:.2f}")
+        print(f"New alien speed: {self.alien_speed:.2f}")
+        print(f"New alien points: {self.alien_points}")
+        print(f"-----------------------")
