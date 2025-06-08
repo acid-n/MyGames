@@ -21,7 +21,7 @@ class Settings():
         self.bullet_speed = 1.5
         self.bullet_width = 3
         self.bullet_height = 15
-        self.bullet_color = (0, 255, 0) # Green bullets
+        self.bullet_color = (255, 255, 0) # Bright yellow for better visibility
         self.bullets_allowed = 100      # More bullets allowed
 
         # Настройки пришельцев
@@ -29,7 +29,7 @@ class Settings():
         self.fleet_drop_speed = 10
 
         # Темп ускорения игры
-        self.speedup_scale = 1.9
+        self.speedup_scale = 1.15 # Уменьшен для более плавной прогрессии
         # Темп роста стоимости пришельцев
         self.score_scale = 1.5
 
