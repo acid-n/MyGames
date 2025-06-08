@@ -31,6 +31,16 @@ class Ship(Sprite):
         self.moving_right = False
         self.moving_left = False
 
+        # Атрибуты щита
+        self.shield_active = False
+        self.shield_end_time = 0
+
+    def activate_shield(self):
+        """Активирует щит на корабле на определенное время."""
+        self.shield_active = True
+        self.shield_end_time = pygame.time.get_ticks() + self.settings.shield_duration
+        # Возможно, добавить звуковой эффект или визуальное подтверждение активации здесь
+
     def update(self):
         """Обновляет позицию корабля с учетом флагов"""
 
@@ -43,9 +53,20 @@ class Ship(Sprite):
         # Обновление атрибута rect на основании self.x
         self.rect.x = self.x
 
+        # Проверка и деактивация щита по времени
+        if self.shield_active and pygame.time.get_ticks() > self.shield_end_time:
+            self.shield_active = False
+            # Возможно, добавить звуковой эффект или визуальное подтверждение деактивации
+
     def blitme(self):
         """Рисует корабль в текущей позиции"""
         self.screen.blit(self.image, self.rect)
+
+        # Отрисовка щита, если он активен
+        if self.shield_active:
+            # Создаем прямоугольник немного больше корабля для эффекта обводки
+            shield_rect = self.rect.inflate(10, 10) # Увеличить на 5 пикс. с каждой стороны
+            pygame.draw.rect(self.screen, self.settings.ship_shield_outline_color, shield_rect, 2) # Толщина линии 2 пикс.
 
     def center_ship(self):
         """Размещает корабль в центре нижней стороны"""
