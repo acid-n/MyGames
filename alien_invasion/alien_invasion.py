@@ -10,6 +10,8 @@ from button import Button
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
+from powerup import PowerUp
+import random
 
 class AlienInvasion:
     """Класс для управления ресурсами и поведением игры"""
@@ -53,6 +55,8 @@ class AlienInvasion:
         # _create_fleet() будет вызываться в _start_new_game(), а не при инициализации
         # self._create_fleet() # Убрано отсюда
 
+        self.powerups = pygame.sprite.Group()
+
     def run_game(self):
         """Запуск основного цикла игры"""
         while True:
@@ -62,6 +66,8 @@ class AlienInvasion:
                 self.ship.update()
                 self._update_bullets()
                 self._update_aliens()
+                self.powerups.update()
+                self._check_ship_powerup_collisions()
             elif self.game_state == self.STATE_MENU:
                 # Placeholder for menu update logic (e.g., self._update_menu())
                 pass
@@ -129,6 +135,7 @@ class AlienInvasion:
         # Очистка списков пришельцев и снарядов
         self.aliens.empty()
         self.bullets.empty()
+        self.powerups.empty() # Очищаем бонусы при новой игре/раунде
         # Создание нового флота и размещение корабля в центре
         self._create_fleet()
         self.ship.center_ship()
@@ -177,8 +184,14 @@ class AlienInvasion:
         collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
 
         if collisions:
-            for aliens in collisions.values():
-                self.stats.score += self.settings.alien_points * len(aliens)
+            for aliens_collided_list in collisions.values(): # aliens_collided_list is a list of Alien objects
+                for alien_hit in aliens_collided_list:
+                    self.stats.score += self.settings.alien_points # Score per alien
+                    if random.random() < self.settings.powerup_spawn_chance:
+                        shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
+                        self.powerups.add(shield_powerup)
+                    # No break here, so if a bullet hits multiple aliens, each has a chance to drop a powerup
+                    # and each awards points.
             self.sb.prep_score()
             self.sb.check_high_score()
 
@@ -218,6 +231,15 @@ class AlienInvasion:
 
     def _ship_hit(self):
         """Обрабатывает столкновение корабля с пришельцами"""
+        if self.ship.shield_active:
+            # Если щит активен, не обрабатываем попадание
+            # Можно добавить логику уничтожения пришельца, столкнувшегося со щитом, если нужно
+            # Например, найти столкнувшегося пришельца и вызвать alien.kill()
+            # Это потребует передачи информации о столкнувшемся пришельце в _ship_hit
+            # или повторной проверки столкновения здесь.
+            # Пока что щит просто делает корабль неуязвимым.
+            return
+
         if self.stats.ships_left > 0:
             # Уменьшение ships_left и обновление панели счета
             self.stats.ships_left -= 1
@@ -279,6 +301,7 @@ class AlienInvasion:
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
         self.aliens.draw(self.screen)
+        self.powerups.draw(self.screen) # Отрисовка бонусов
 
         # Вывод информации о счете
         self.sb.show_score()
@@ -300,6 +323,15 @@ class AlienInvasion:
             # поэтому они останутся видимыми, но замороженными.
 
         pygame.display.flip()
+
+    def _check_ship_powerup_collisions(self):
+        """Проверяет столкновения корабля с бонусами."""
+        # The True argument will remove the power-up sprite upon collision
+        collected_powerups = pygame.sprite.spritecollide(self.ship, self.powerups, True)
+        for powerup in collected_powerups:
+            if powerup.powerup_type == 'shield':
+                self.ship.activate_shield()
+            # Add elif for other powerup_type if they exist later
 
 if __name__ == '__main__':
     # Создание экземпляра и запуск игры

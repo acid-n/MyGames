@@ -74,6 +74,19 @@ class Settings():
         self.menu_new_game_button_text = "Новая игра"
         self.menu_exit_button_text = "Выход"
 
+        # Power-up Settings (Shield as the first example)
+        self.shield_duration = 5000  # milliseconds (5 seconds)
+        self.powerup_spawn_chance = 0.1  # 10% chance per destroyed alien (example logic)
+
+        # Shield Power-up item visual properties
+        self.shield_powerup_color = (0, 0, 255)  # Blue
+        self.shield_powerup_width = 15
+        self.shield_powerup_height = 15
+        self.shield_powerup_speed = 1.0 # Speed at which the power-up item falls
+
+        # Ship's shield visual effect
+        self.ship_shield_outline_color = (0, 191, 255)  # Deep sky blue
+
         self.initialize_dynamic_settings()
 
     def initialize_dynamic_settings(self):
