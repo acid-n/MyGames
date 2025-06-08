@@ -1,5 +1,11 @@
 import os
 
+def lerp(start, end, t):
+    """Линейная интерполяция."""
+    # Ограничиваем t между 0 и 1
+    t = max(0.0, min(1.0, t))
+    return start + t * (end - start)
+
 _SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
 _IMAGES_DIR = os.path.join(_SETTINGS_DIR, 'images')
 
@@ -107,15 +113,14 @@ class Settings():
             { # Level 1 Settings
                 'min_alien_speed': 0.3,
                 'alien_speed_increase_rate': 0.0,
-                'alien_speed_max_level': 0.3,
+                'min_alien_speed': 0.3,
+                'alien_speed_increase_rate': 0.0, # These could also be dynamic if desired
+                'alien_speed_max_level': 0.3,   # Or derived from min_alien_speed
                 'fleet_drop_speed': 8,
                 'aliens_per_row_factor': 0.7,
                 'alien_rows_factor': 0.5,
                 'alien_points': 50,
-                'shield_spawn_chance': 0.0,
-                'double_fire_spawn_chance': 0.0,
-                'double_fire_min_cooldown': 999999, # Effectively infinite
-                'powerup_general_min_level_time': 999999, # Effectively infinite
+                # Power-up keys removed as they are now dynamically calculated
             },
             { # Level 2 Settings
                 'min_alien_speed': 0.5,
@@ -125,10 +130,6 @@ class Settings():
                 'aliens_per_row_factor': 0.85,
                 'alien_rows_factor': 0.7,
                 'alien_points': 75,
-                'shield_spawn_chance': 0.1,
-                'double_fire_spawn_chance': 0.0,
-                'double_fire_min_cooldown': 999999, # Effectively infinite for DF
-                'powerup_general_min_level_time': 5000, # 5 seconds
             },
             { # Level 3 Settings
                 'min_alien_speed': 0.7,
@@ -138,27 +139,105 @@ class Settings():
                 'aliens_per_row_factor': 1.0,
                 'alien_rows_factor': 0.9,
                 'alien_points': 100,
-                'shield_spawn_chance': 0.07,
-                'double_fire_spawn_chance': 0.05,
-                'double_fire_min_cooldown': 15000, # 15 seconds
-                'powerup_general_min_level_time': 3000, # 3 seconds
             }
         ]
+        # self.level_settings can be further trimmed or removed if all aspects are dynamic
+        # and no specific per-level overrides are needed.
         self.current_level_number = 1 # Default to level 1
 
         self.initialize_dynamic_settings(self.current_level_number)
 
+    # --- Calculation functions for dynamic settings ---
+    def calculate_alien_speed(self, level_number):
+        base_speed = 0.3
+        speed_at_level_50 = 1.5
+        max_speed = 2.0
+        t = level_number / 50.0
+        calculated_speed = lerp(base_speed, speed_at_level_50, t)
+        return min(calculated_speed, max_speed)
+
+    def calculate_fleet_drop_speed(self, level_number):
+        base_drop = 8
+        drop_at_level_30 = 15
+        max_drop = 20
+        t = level_number / 30.0
+        calculated_drop = lerp(base_drop, drop_at_level_30, t)
+        return min(calculated_drop, max_drop)
+
+    def calculate_aliens_per_row_factor(self, level_number):
+        base_factor = 0.7
+        factor_at_level_20 = 1.0
+        max_factor = 1.1
+        t = level_number / 20.0
+        calculated_factor = lerp(base_factor, factor_at_level_20, t)
+        return min(calculated_factor, max_factor)
+
+    def calculate_alien_rows_factor(self, level_number):
+        base_factor = 0.5
+        factor_at_level_25 = 0.9
+        max_factor = 1.0
+        t = level_number / 25.0
+        calculated_factor = lerp(base_factor, factor_at_level_25, t)
+        return min(calculated_factor, max_factor)
+
+    def calculate_alien_points(self, level_number):
+        base_points = 50
+        points_increment = 5
+        max_points = 250
+        calculated_points = base_points + (level_number - 1) * points_increment
+        return min(calculated_points, max_points)
+
+    # --- Calculation functions for power-up settings ---
+    def calculate_shield_spawn_chance(self, level_number):
+        if level_number < 1:
+            return 0.0
+        # Level 1: 0.0, Level 20: 0.15, Cap: 0.20
+        val = lerp(0.0, 0.15, (level_number - 1) / (20.0 - 1))
+        return min(val, 0.20)
+
+    def calculate_double_fire_spawn_chance(self, level_number):
+        if level_number < 3: # No double fire before level 3
+            return 0.0
+        # Level 3: 0.0, Level 25: 0.10, Cap: 0.15
+        val = lerp(0.0, 0.10, (level_number - 3) / (25.0 - 3))
+        return min(val, 0.15)
+
+    def calculate_double_fire_min_cooldown(self, level_number):
+        if level_number < 1: # Should not happen if level_number starts at 1
+            level_number = 1
+        # Level 1: 60000ms, Level 30: 10000ms, Min Cooldown: 8000ms
+        val = lerp(60000.0, 10000.0, (level_number - 1) / (30.0 - 1))
+        return max(val, 8000.0) # Ensure it doesn't go below min_cooldown
+
+    def calculate_powerup_general_min_level_time(self, level_number):
+        if level_number < 1: # Should not happen
+            level_number = 1
+        # Level 1: 10000ms, Level 10: 3000ms, Min Time: 2000ms
+        val = lerp(10000.0, 3000.0, (level_number - 1) / (10.0 - 1))
+        return max(val, 2000.0) # Ensure it doesn't go below min_time
+
     def get_current_level_settings(self, level_number):
-        """Возвращает словарь настроек для указанного уровня."""
-        # Уровень нумеруется с 1, а список с 0
-        level_index = level_number - 1
-        if level_index < 0:
-            level_index = 0 # Безопасность, если вдруг передан некорректный уровень
-        if level_index >= len(self.level_settings):
-            # Если запрошенный уровень превышает количество определенных,
-            # используем настройки последнего определенного уровня (или можно ввести множители)
-            return self.level_settings[-1]
-        return self.level_settings[level_index]
+        """Возвращает словарь настроек для указанного уровня, вычисляя их динамически."""
+        settings = {}
+
+        # Рассчитываем основные параметры сложности
+        settings['min_alien_speed'] = self.calculate_alien_speed(level_number)
+        settings['fleet_drop_speed'] = self.calculate_fleet_drop_speed(level_number)
+        settings['aliens_per_row_factor'] = self.calculate_aliens_per_row_factor(level_number)
+        settings['alien_rows_factor'] = self.calculate_alien_rows_factor(level_number)
+        settings['alien_points'] = self.calculate_alien_points(level_number)
+
+        # alien_speed_increase_rate и alien_speed_max_level
+        settings['alien_speed_increase_rate'] = 0.00005 # Может оставаться константой или стать динамическим
+        settings['alien_speed_max_level'] = settings['min_alien_speed'] # Связано с min_alien_speed
+
+        # Динамически рассчитываемые настройки бонусов
+        settings['shield_spawn_chance'] = self.calculate_shield_spawn_chance(level_number)
+        settings['double_fire_spawn_chance'] = self.calculate_double_fire_spawn_chance(level_number)
+        settings['double_fire_min_cooldown'] = self.calculate_double_fire_min_cooldown(level_number)
+        settings['powerup_general_min_level_time'] = self.calculate_powerup_general_min_level_time(level_number)
+
+        return settings
 
     def initialize_dynamic_settings(self, level_number):
         """Инициализирует настройки, изменяющиеся в ходе игры, на основе текущего уровня."""
@@ -170,31 +249,26 @@ class Settings():
         self.bullet_speed = 1.5 # Или можно сделать частью level_settings
 
         # Настройки пришельцев из данных уровня
-        self.min_alien_speed = level_config.get('min_alien_speed', 0.5)
+        self.min_alien_speed = level_config['min_alien_speed']
         self.alien_speed_current = self.min_alien_speed # Начальная скорость пришельцев для уровня
-        # Ensure alien_speed_increase_rate and alien_speed_max_level are loaded
-        self.alien_speed_increase_rate = level_config.get('alien_speed_increase_rate', 0.0)
-        self.alien_speed_max_level = level_config.get('alien_speed_max_level', self.alien_speed_current)
+        self.alien_speed_increase_rate = level_config['alien_speed_increase_rate']
+        self.alien_speed_max_level = level_config['alien_speed_max_level']
 
-        self.fleet_drop_speed = level_config.get('fleet_drop_speed', 10)
-        self.alien_points = level_config.get('alien_points', 50)
+        self.fleet_drop_speed = level_config['fleet_drop_speed']
+        self.alien_points = level_config['alien_points']
 
-        # Факторы для расчета количества пришельцев, делаем их доступными как атрибуты
-        self.current_aliens_per_row_factor = level_config.get('aliens_per_row_factor', 1.0)
-        self.current_alien_rows_factor = level_config.get('alien_rows_factor', 1.0)
+        # Факторы для расчета количества пришельцев
+        self.current_aliens_per_row_factor = level_config['aliens_per_row_factor']
+        self.current_alien_rows_factor = level_config['alien_rows_factor']
 
-        # Power-up settings from level_config
-        self.current_shield_spawn_chance = level_config.get('shield_spawn_chance', 0.0)
-        self.current_double_fire_spawn_chance = level_config.get('double_fire_spawn_chance', 0.0)
-        self.current_double_fire_min_cooldown = level_config.get('double_fire_min_cooldown', 999999)
-        self.current_powerup_general_min_level_time = level_config.get('powerup_general_min_level_time', 999999)
-
+        # Настройки бонусов
+        self.current_shield_spawn_chance = level_config['shield_spawn_chance']
+        self.current_double_fire_spawn_chance = level_config['double_fire_spawn_chance']
+        self.current_double_fire_min_cooldown = level_config['double_fire_min_cooldown']
+        self.current_powerup_general_min_level_time = level_config['powerup_general_min_level_time']
 
         # fleet_direction = 1 обозначает движение вправо, а -1 влево
         self.fleet_direction = 1
-
-        # Глобальный alien_speed_max все еще может быть полезен для DDA, если DDA выходит за рамки одного уровня
-        # self.alien_speed_max = 3.0 # Этот атрибут теперь менее важен, т.к. есть alien_speed_max_level
 
     def load_level_settings(self, new_level_number):
         """Загружает настройки для нового уровня."""
@@ -203,11 +277,10 @@ class Settings():
 
     def increase_speed(self):
         """Увеличивает настройки скорости корабля и снарядов.
-           Скорость пришельцев и очки теперь управляются через load_level_settings."""
+           Скорость пришельцев и очки теперь управляются через load_level_settings (динамически)."""
         self.ship_speed *= self.speedup_scale
         self.bullet_speed *= self.speedup_scale
-        # self.min_alien_speed *= self.speedup_scale # Удалено, управляется настройками уровня
-        # self.alien_points = int(self.alien_points * self.score_scale) # Удалено, управляется настройками уровня
+        # self.min_alien_speed и self.alien_points больше не масштабируются здесь
 
         # Логирование изменения скорости
         print(f"--- Ship/Bullet Speed Increased (Global Scale) ---")
