@@ -25,11 +25,11 @@ class Settings():
         self.bullets_allowed = 100      # Больше разрешенных снарядов
 
         # Настройки пришельцев
-        # self.alien_speed = 1.0 # Заменено на alien_speed_current, _initial, _max, _increase_rate
-        self.alien_speed_initial = 0.5  # Начальная скорость пришельцев
-        self.alien_speed_current = self.alien_speed_initial # Текущая скорость пришельцев, постепенно увеличивается
+        # self.alien_speed = 1.0 # Заменено на alien_speed_current, min_alien_speed, max_alien_speed
+        self.min_alien_speed = 0.5  # Минимальная скорость пришельцев (начальная)
+        self.alien_speed_current = self.min_alien_speed # Текущая скорость пришельцев, изменяется динамически
         self.alien_speed_max = 3.0      # Максимальная скорость пришельцев
-        self.alien_speed_increase_rate = 0.0001 # Насколько скорость пришельцев увеличивается за игровой цикл в состоянии игры
+        self.target_score_for_max_speed = 50000 # Целевой счет для достижения максимальной скорости пришельцев
         self.fleet_drop_speed = 10
 
         # Темп ускорения игры
@@ -95,7 +95,8 @@ class Settings():
 
         # Бонус "Двойной выстрел"
         self.double_fire_duration = 10000  # мс (10 секунд)
-        self.double_fire_spawn_chance = 0.08 # 8% шанс, немного меньше, чем у щита
+        self.double_fire_spawn_chance = 0.05 # 5% шанс появления (теперь независимый и с кулдауном)
+        self.double_fire_min_cooldown = 15000 # Минимальный кулдаун в мс (15 секунд) для появления следующего бонуса "Двойной выстрел"
         # Визуальные свойства бонуса "Двойной выстрел"
         self.double_fire_powerup_color = (255, 165, 0)  # Оранжевый
         self.double_fire_powerup_width = 15
@@ -109,8 +110,8 @@ class Settings():
         # Сброс настроек скорости к их начальным значениям
         self.ship_speed = 1.5
         self.bullet_speed = 1.5
-        # self.alien_speed = 1.0 # Удалено, теперь управляется alien_speed_current, который сбрасывается до alien_speed_initial
-        self.alien_speed_current = self.alien_speed_initial # Сброс текущей скорости до начальной для новой игры/уровня
+        # self.alien_speed = 1.0 # Удалено, теперь управляется alien_speed_current, который сбрасывается до min_alien_speed
+        self.alien_speed_current = self.min_alien_speed # Сброс текущей скорости до минимальной для новой игры/уровня
 
         # fleet_direction = 1 обозначает движение вправо, а -1 влево
         self.fleet_direction = 1
@@ -122,11 +123,11 @@ class Settings():
         """Увеличивает настройки скорости и стоимость пришельцев"""
         self.ship_speed *= self.speedup_scale
         self.bullet_speed *= self.speedup_scale
-        # self.alien_speed *= self.speedup_scale # Теперь увеличивает alien_speed_initial для следующего уровня
-        self.alien_speed_initial *= self.speedup_scale # Увеличить базовую скорость для следующего уровня
-        # Убедиться, что alien_speed_initial не превышает alien_speed_max после увеличения.
-        # Хотя текущая логика подразумевает, что alien_speed_current ограничивается alien_speed_max во время игры.
-        # Рассмотреть, должен ли alien_speed_initial также ограничиваться или speedup_scale управляется для предотвращения чрезмерных начальных скоростей.
+        # self.alien_speed *= self.speedup_scale # Теперь увеличивает min_alien_speed для следующего уровня
+        self.min_alien_speed *= self.speedup_scale # Увеличить базовую (минимальную) скорость для следующего уровня
+        # Убедиться, что min_alien_speed не превышает alien_speed_max после увеличения.
+        # Текущая логика DDA будет использовать alien_speed_current, который ограничивается alien_speed_max.
+        # Это изменение влияет на базовую скорость для начала следующего уровня или после сброса.
 
         self.alien_points = int(self.alien_points * self.score_scale)
 
@@ -134,6 +135,6 @@ class Settings():
         print(f"--- Speed Increased ---")
         print(f"New ship speed: {self.ship_speed:.2f}")
         print(f"New bullet speed: {self.bullet_speed:.2f}")
-        print(f"New initial alien speed for next level: {self.alien_speed_initial:.2f}") # Обновленное сообщение в логе
+        print(f"New min alien speed for next level: {self.min_alien_speed:.2f}") # Обновленное сообщение в логе
         print(f"New alien points: {self.alien_points}")
         print(f"-----------------------")
