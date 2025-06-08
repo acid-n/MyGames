@@ -65,10 +65,10 @@ class AlienInvasion:
             if self.game_state == self.STATE_PLAYING:
                 self.ship.update()
                 self._update_bullets()
-                # Gradually increase alien speed during gameplay
+                # Постепенное увеличение скорости пришельцев во время игры
                 if self.settings.alien_speed_current < self.settings.alien_speed_max:
                     self.settings.alien_speed_current += self.settings.alien_speed_increase_rate
-                    # Ensure current speed does not exceed max speed
+                    # Убедимся, что текущая скорость не превышает максимальную
                     self.settings.alien_speed_current = min(self.settings.alien_speed_current, self.settings.alien_speed_max)
                 self._update_aliens()
                 self.powerups.update()
@@ -166,14 +166,14 @@ class AlienInvasion:
     def _fire_bullet(self):
         """Создание нового снаряда (или двух) и включение его в группу bullets"""
         if self.ship.double_fire_active:
-            # Двойной огонь активен
+            # Режим "Двойной выстрел" активен
             if len(self.bullets) <= self.settings.bullets_allowed - 2: # Убедимся, что есть место для двух снарядов
                 bullet1 = Bullet(self)
                 bullet2 = Bullet(self)
 
                 # Смещаем снаряды относительно центра корабля
-                # Начальная позиция обоих снарядов - верхушка центра корабля
-                # Затем смещаем rect.x для каждого. self.y в Bullet уже установлен корректно.
+                # Начальная позиция обоих снарядов - верхушка центра корабля.
+                # Затем смещаем rect.x для каждого. self.y в классе Bullet уже установлен корректно.
                 bullet1.rect.x -= 10 # Сместить влево
                 bullet2.rect.x += 10 # Сместить вправо
 
@@ -207,57 +207,27 @@ class AlienInvasion:
         if collisions:
             for aliens_collided_list in collisions.values(): # aliens_collided_list is a list of Alien objects
                 for alien_hit in aliens_collided_list:
-                    self.stats.score += self.settings.alien_points # Score per alien
+                    self.stats.score += self.settings.alien_points # Очки за пришельца
 
-                    # Логика спавна бонусов
-                    # Решено использовать независимые шансы для каждого типа бонуса
-                    spawn_roll = random.random()
-                    if spawn_roll < self.settings.shield_spawn_chance: # Первый приоритет - щит
-                        shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
-                        self.powerups.add(shield_powerup)
-                    # Если щит не выпал, проверяем шанс на двойной огонь
-                    # Используем elif, чтобы не спавнить оба бонуса одновременно от одного пришельца
-                    # Для независимого шанса без приоритета, можно использовать два if подряд.
-                    # Но для баланса, обычно лучше, чтобы выпадал только один бонус за раз.
-                    elif spawn_roll < (self.settings.shield_spawn_chance + self.settings.double_fire_spawn_chance): # Суммируем шансы, если они взаимоисключающие
-                        # Этот подход (суммирование) не совсем корректен для независимых шансов, которые должны срабатывать одновременно.
-                        # Правильнее было бы так:
-                        # if random.random() < self.settings.shield_spawn_chance: create_shield()
-                        # if random.random() < self.settings.double_fire_spawn_chance: create_double_fire()
-                        # Но задание просит "elif random.random() < self.settings.double_fire_spawn_chance",
-                        # что означает, что второй шанс проверяется, только если первый не сработал.
-                        # Это делает шанс double_fire зависимым от shield_spawn_chance.
-                        # Для истинно независимых шансов, как указано в settings.py, нужно два отдельных if.
-                        # Исправляю на два отдельных if, как более логичный вариант для "независимых шансов".
-                        pass # Старый комментарий выше, оставляю для истории.
+                    # Логика появления бонусов
+                    # Решено использовать независимые шансы для каждого типа бонуса, но с приоритетом (elif)
+                    # current_spawn_roll = random.random() # Один бросок для определения, выпадет ли бонус вообще (если бы была общая вероятность)
 
-                    # Исправленная логика для независимых шансов:
+                    # Логика появления бонуса "Щит"
                     if random.random() < self.settings.shield_spawn_chance:
                         shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
                         self.powerups.add(shield_powerup)
-                    # Проверяем второй бонус независимо от первого.
-                    # Если нужно, чтобы выпадал ТОЛЬКО ОДИН бонус, тогда нужен другой подход (один ролл, потом выбор).
-                    # Текущая задача подразумевает, что они могут выпасть ОБА или ни одного, или один из них.
-                    # Однако, в задании указано "elif random.random() < self.settings.double_fire_spawn_chance:",
-                    # что означает, что они не должны спавниться оба. Я буду следовать этому указанию.
-
-                    # Вернемся к указанию "elif" из задачи:
-                    # Это означает, что сначала проверяется шанс на щит. Если он не выпал, проверяется шанс на двойной огонь.
-                    # Это делает фактический шанс выпадения double_fire меньше, чем double_fire_spawn_chance,
-                    # так как он зависит от того, не выпал ли щит.
-                    # (1 - shield_spawn_chance) * double_fire_spawn_chance - это будет его реальный шанс.
-                    # Для простоты следуем заданию.
-
-                    current_spawn_roll = random.random() # Новый ролл для текущего бонуса
-                    if current_spawn_roll < self.settings.shield_spawn_chance:
-                        shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
-                        self.powerups.add(shield_powerup)
-                    elif random.random() < self.settings.double_fire_spawn_chance: # Как указано в задаче
+                    # Логика появления бонуса "Двойной выстрел"
+                    # Используется 'elif', как указано в задаче. Это означает, что "Двойной выстрел"
+                    # имеет шанс появиться только если "Щит" не появился.
+                    # Это делает фактический шанс появления "Двойного выстрела" ниже, чем self.settings.double_fire_spawn_chance,
+                    # так как он зависит от того, что "Щит" не выпал: (1 - shield_spawn_chance) * double_fire_spawn_chance.
+                    elif random.random() < self.settings.double_fire_spawn_chance:
                         df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
                         self.powerups.add(df_powerup)
 
-                    # No break here, so if a bullet hits multiple aliens, each has a chance to drop a powerup
-                    # and each awards points.
+                    # Нет break, поэтому если пуля попадает в нескольких пришельцев, каждый имеет шанс выбросить бонус
+                    # и каждый дает очки.
             self.sb.prep_score()
             self.sb.check_high_score()
 
@@ -397,9 +367,9 @@ class AlienInvasion:
         for powerup in collected_powerups:
             if powerup.powerup_type == 'shield':
                 self.ship.activate_shield()
-            elif powerup.powerup_type == 'double_fire': # Обработка сбора бонуса "Двойной огонь"
+            elif powerup.powerup_type == 'double_fire': # Обработка сбора бонуса "Двойной выстрел"
                 self.ship.activate_double_fire()
-            # Add elif for other powerup_type if they exist later
+            # Добавить elif для других типов бонусов, если они появятся позже
 
 if __name__ == '__main__':
     # Создание экземпляра и запуск игры
