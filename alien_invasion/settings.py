@@ -46,6 +46,9 @@ class Settings():
         self.ship_image_path = os.path.join(_IMAGES_DIR, 'ship.bmp')
         self.alien_image_path = os.path.join(_IMAGES_DIR, 'alien.bmp')
 
+        # High score storage
+        self.highscore_filepath = os.path.join(_SETTINGS_DIR, "highscore.json")
+
         # Scoreboard settings
         self.scoreboard_text_color = (30, 30, 30)
         self.scoreboard_font_size = 48
