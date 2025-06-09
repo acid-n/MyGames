@@ -80,7 +80,13 @@ class AlienInvasion:
 
         self.powerups = pygame.sprite.Group()
         self.last_double_fire_spawn_time = 0 # Время последнего появления бонуса "Двойной выстрел"
+        self.last_shield_spawn_time = 0 # Время последнего появления бонуса "Щит"
         self.level_start_time = 0 # Время начала текущего уровня (в тиках)
+
+        # Счетчики для гарантированного выпадения бонуса
+        self.aliens_in_wave = 0 # Общее количество пришельцев в текущей волне
+        self.aliens_destroyed_current_wave = 0 # Количество уничтоженных пришельцев в текущей волне
+        self.guaranteed_powerup_spawned_this_wave = False # Флаг, был ли уже гарантированный бонус в этой волне
 
     def run_game(self):
         """Запуск основного цикла игры"""
@@ -116,14 +122,13 @@ class AlienInvasion:
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    if self.game_state == self.STATE_PLAYING:
-                        self.game_state = self.STATE_PAUSED
-                        pygame.mouse.set_visible(True)
-                    elif self.game_state == self.STATE_PAUSED:
-                        self.game_state = self.STATE_PLAYING
-                        pygame.mouse.set_visible(False)
+                    # Если игра в процессе или на паузе, ESC теперь всегда ведет в главное меню
+                    if self.game_state == self.STATE_PLAYING or self.game_state == self.STATE_PAUSED:
+                        self.game_state = self.STATE_MENU
+                        pygame.mouse.set_visible(True) # Показываем мышь в меню
+                    # Если в главном меню или на экране конца игры, ESC по-прежнему закрывает игру
                     elif self.game_state == self.STATE_MENU or self.game_state == self.STATE_GAME_OVER:
-                        sys.exit() # Exit game if ESC pressed in Menu or Game Over
+                        sys.exit()
                 elif event.key == pygame.K_p: # Simple Pause toggle (no menu)
                     if self.game_state == self.STATE_PLAYING:
                         self.game_state = self.STATE_PAUSED
@@ -178,7 +183,14 @@ class AlienInvasion:
         self.stats.game_active = True
         self.game_state = self.STATE_PLAYING # Установка активного состояния игры
         self.last_double_fire_spawn_time = 0 # Сброс таймера кулдауна для "Двойного выстрела"
+        self.last_shield_spawn_time = 0 # Сброс таймера кулдауна для "Щита"
         self.level_start_time = pygame.time.get_ticks() # Установка времени начала уровня
+
+        # Сброс счетчиков для гарантированного бонуса при новой игре
+        self.aliens_in_wave = 0
+        self.aliens_destroyed_current_wave = 0
+        self.guaranteed_powerup_spawned_this_wave = False
+
         self.sb.prep_score()
         self.sb.prep_level()
         self.sb.prep_ships()
@@ -257,37 +269,79 @@ class AlienInvasion:
         collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
 
         if collisions:
-            for aliens_collided_list in collisions.values(): # aliens_collided_list is a list of Alien objects
+            for aliens_collided_list in collisions.values(): # aliens_collided_list - список пришельцев, уничтоженных одной пулей
                 for alien_hit in aliens_collided_list:
                     self.stats.score += self.settings.alien_points # Очки за пришельца
+                    self.aliens_destroyed_current_wave += 1 # Увеличиваем счетчик уничтоженных в волне
 
-                    # --- Логика появления бонусов ---
                     current_game_time = pygame.time.get_ticks()
 
-                    # 1. Проверка общего минимального времени в уровне для появления бонусов
-                    if hasattr(self.settings, 'current_powerup_general_min_level_time') and \
-                       (current_game_time - self.level_start_time) < self.settings.current_powerup_general_min_level_time:
-                        pass # Слишком рано в уровне для бонусов, ничего не делаем
-                    else:
-                        # 2. Логика появления бонуса "Щит"
-                        if hasattr(self.settings, 'current_shield_spawn_chance') and \
-                           self.settings.current_shield_spawn_chance > 0:
-                            if random.random() < self.settings.current_shield_spawn_chance:
+                    # --- Логика гарантированного появления бонуса ---
+                    # Проверяем, если еще не было гарантированного бонуса в этой волне
+                    # и уничтожено достаточно пришельцев (например, 75%)
+                    if not self.guaranteed_powerup_spawned_this_wave and \
+                       self.aliens_in_wave > 0 and \
+                       self.aliens_destroyed_current_wave >= 0.75 * self.aliens_in_wave:
+
+                        spawned_guaranteed = False
+                        # Пытаемся сначала заспавнить "Щит"
+                        if self.stats.level >= 2 and \
+                           hasattr(self.settings, 'current_shield_min_cooldown') and \
+                           (current_game_time - self.last_shield_spawn_time) > self.settings.current_shield_min_cooldown:
+                            # Проверяем также шанс, чтобы не спавнить всегда, если доступно по уровню и КД прошел
+                            # Хотя для гарантированного спавна можно и без random.random() < settings.current_shield_spawn_chance
+                            # Но для консистентности и если шанс 0, то не спавнить.
+                            if hasattr(self.settings, 'current_shield_spawn_chance') and self.settings.current_shield_spawn_chance > 0:
                                 shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
                                 self.powerups.add(shield_powerup)
+                                self.last_shield_spawn_time = current_game_time
+                                self.guaranteed_powerup_spawned_this_wave = True
+                                spawned_guaranteed = True
 
-                        # 3. Логика появления бонуса "Двойной выстрел"
-                        if hasattr(self.settings, 'current_double_fire_spawn_chance') and \
+                        # Если "Щит" не заспавнен (или не мог быть заспавнен) и гарантированный бонус еще не вышел
+                        if not spawned_guaranteed and \
+                           self.stats.level >= 3 and \
                            hasattr(self.settings, 'current_double_fire_min_cooldown') and \
-                           self.settings.current_double_fire_spawn_chance > 0:
+                           (current_game_time - self.last_double_fire_spawn_time) > self.settings.current_double_fire_min_cooldown:
+                            if hasattr(self.settings, 'current_double_fire_spawn_chance') and self.settings.current_double_fire_spawn_chance > 0:
+                                df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
+                                self.powerups.add(df_powerup)
+                                self.last_double_fire_spawn_time = current_game_time
+                                self.guaranteed_powerup_spawned_this_wave = True
+                                # spawned_guaranteed = True # Уже не нужно, это последний вариант
+
+                    # --- Обычная логика появления бонусов (если гарантированный еще не выпал) ---
+                    # Проверка общего минимального времени на уровне для появления бонусов
+                    if hasattr(self.settings, 'current_powerup_general_min_level_time') and \
+                       (current_game_time - self.level_start_time) < self.settings.current_powerup_general_min_level_time:
+                        pass # Слишком рано на уровне для бонусов
+                    else:
+                        # Логика появления бонуса "Щит" (если не было гарантированного спавна)
+                        if not self.guaranteed_powerup_spawned_this_wave and \
+                           hasattr(self.settings, 'current_shield_spawn_chance') and \
+                           hasattr(self.settings, 'current_shield_min_cooldown') and \
+                           self.settings.current_shield_spawn_chance > 0 and \
+                           self.stats.level >= 2: # Щит доступен со 2-го уровня
+                            if (current_game_time - self.last_shield_spawn_time) > self.settings.current_shield_min_cooldown:
+                                if random.random() < self.settings.current_shield_spawn_chance:
+                                    shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
+                                    self.powerups.add(shield_powerup)
+                                    self.last_shield_spawn_time = current_game_time
+                                    self.guaranteed_powerup_spawned_this_wave = True # Засчитываем как выпавший бонус
+
+                        # Логика появления бонуса "Двойной выстрел" (если не было гарантированного спавна или щита)
+                        if not self.guaranteed_powerup_spawned_this_wave and \
+                           hasattr(self.settings, 'current_double_fire_spawn_chance') and \
+                           hasattr(self.settings, 'current_double_fire_min_cooldown') and \
+                           self.settings.current_double_fire_spawn_chance > 0 and \
+                           self.stats.level >= 3: # Двойной выстрел доступен с 3-го уровня
                             if (current_game_time - self.last_double_fire_spawn_time) > self.settings.current_double_fire_min_cooldown:
                                 if random.random() < self.settings.current_double_fire_spawn_chance:
                                     df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
                                     self.powerups.add(df_powerup)
-                                    self.last_double_fire_spawn_time = current_game_time # Обновляем время последнего появления
+                                    self.last_double_fire_spawn_time = current_game_time
+                                    self.guaranteed_powerup_spawned_this_wave = True # Засчитываем как выпавший бонус
 
-                    # Нет break, поэтому если пуля попадает в нескольких пришельцев, каждый имеет шанс выбросить бонус
-                    # и каждый дает очки.
             self.sb.prep_score()
             self.sb.check_high_score()
 
@@ -353,7 +407,7 @@ class AlienInvasion:
             pygame.mouse.set_visible(True)
 
     def _create_fleet(self):
-        """Создание флота вторжения"""
+        """Создание флота вторжения и сброс счетчиков для гарантированного бонуса."""
         # Создание пришельца и вычисление количества пришельцев в ряду
         # Интервал между соседними пришельцами равен ширине пришельца
         alien = Alien(self) # Dummy alien for dimensions
@@ -379,6 +433,11 @@ class AlienInvasion:
         for row_number in range(number_rows):
             for alien_number in range(number_aliens_x):
                 self._create_alien(alien_number, row_number, alien_width, alien_height) # Pass alien_width, alien_height
+
+        # Инициализация/сброс счетчиков для механики гарантированного бонуса
+        self.aliens_in_wave = len(self.aliens)
+        self.aliens_destroyed_current_wave = 0
+        self.guaranteed_powerup_spawned_this_wave = False
 
     def _create_alien(self, alien_number, row_number, alien_width, alien_height): # Accept alien_width, alien_height
         """Создание пришельца и размещение его в ряду"""

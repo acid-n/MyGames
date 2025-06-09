@@ -17,12 +17,14 @@ class PowerUp(Sprite):
             self.width = self.settings.shield_powerup_width
             self.height = self.settings.shield_powerup_height
             self.color = self.settings.shield_powerup_color
-            self.speed = self.settings.shield_powerup_speed
-        elif self.powerup_type == 'double_fire': # Новый тип бонуса "Двойной выстрел"
+            # Скорость берется из динамически обновляемых настроек current_..._speed
+            self.speed = self.settings.current_shield_powerup_speed
+        elif self.powerup_type == 'double_fire':
             self.width = self.settings.double_fire_powerup_width
             self.height = self.settings.double_fire_powerup_height
             self.color = self.settings.double_fire_powerup_color
-            self.speed = self.settings.double_fire_powerup_speed
+            # Скорость берется из динамически обновляемых настроек current_..._speed
+            self.speed = self.settings.current_double_fire_powerup_speed
         else:
             # Тип бонуса неизвестен, используем значения по умолчанию или вызываем ошибку
             print(f"Предупреждение: Неизвестный тип бонуса '{self.powerup_type}'. Используются стандартные визуальные свойства.")
