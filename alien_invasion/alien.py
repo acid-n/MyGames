@@ -26,6 +26,9 @@ class Alien(Sprite):
         # Сохранение точной горизонтальной позиции пришельца
         self.x = float(self.rect.x)
 
+        # Тип бонуса, который выпадет из этого пришельца (None если нет)
+        self.assigned_powerup_type = None
+
     def check_edges(self):
         """Возвращает True, если пришелец находится у края экрана"""
         screen_rect = self.screen.get_rect()
