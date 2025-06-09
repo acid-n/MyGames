@@ -1,4 +1,5 @@
 import os
+import math # Импортируем модуль math для математических операций
 
 def lerp(start, end, t):
     """Линейная интерполяция."""
@@ -14,6 +15,10 @@ class Settings():
 
     def __init__(self):
         """Инициализирует статические настройки игры"""
+        # Фактор максимального увеличения скорости пришельцев сверх линейной прогрессии
+        # Используется для уровней 6 и выше
+        self.max_speed_factor = 2.0 # Максимальный множитель скорости
+
         # Параметры экрана
         self.screen_width = 1200
         self.screen_height = 800
@@ -113,34 +118,84 @@ class Settings():
         # Список self.level_settings удален, так как параметры уровней рассчитываются функциями.
         self.current_level_number = 1 # Уровень по умолчанию - 1
 
+        # Дополнительные ряды пришельцев для высоких уровней
+        self.additional_alien_rows = 0 # Инициализация значения по умолчанию
+
         self.initialize_dynamic_settings(self.current_level_number)
 
     # --- Calculation functions for dynamic settings ---
     # --- Функции расчета для динамических настроек ---
     def calculate_alien_speed(self, level_number):
-        # Скорость пришельцев: базовая + прирост за уровень, с ограничением сверху
-        base_speed = 0.3  # Начальная скорость на уровне 1
-        speed_step_per_level = base_speed * 0.03 # Прирост 3% от базовой скорости за каждый уровень после первого
+        # Расчет скорости пришельцев в зависимости от номера уровня.
+        # Для уровней 1-5 используется линейная прогрессия.
+        # Для уровней 6 и выше скорость увеличивается на основе множителя,
+        # который растет каждые 5 уровней, с учетом self.max_speed_factor.
+        # Скорость также ограничена глобальным максимумом self.alien_speed_max.
 
-        # Рассчитанная скорость для текущего уровня
-        # Для level_number = 1, current_speed = base_speed
-        # Для level_number = 2, current_speed = base_speed + speed_step_per_level
-        # и так далее.
-        current_speed = base_speed + (level_number - 1) * speed_step_per_level
+        if level_number < 6:
+            # Старая логика для уровней 1-5
+            # Скорость пришельцев: базовая + прирост за уровень, с ограничением сверху
+            base_speed = 0.3  # Начальная скорость на уровне 1
+            speed_step_per_level = base_speed * 0.03 # Прирост 3% от базовой скорости за каждый уровень после первого
+            # Рассчитанная скорость для текущего уровня
+            current_speed = base_speed + (level_number - 1) * speed_step_per_level
+            max_speed_cap_old_logic = 1.5 # Максимальная скорость пришельцев по старой логике
+            # Возвращаем минимальное значение между рассчитанной скоростью и старым капом (1.5),
+            # но также не превышая глобальный максимум self.alien_speed_max
+            return min(current_speed, max_speed_cap_old_logic, self.alien_speed_max)
+        else:
+            # Новая логика для уровней 6 и выше
+            # Рассчитываем скорость для уровня 5 по старой формуле как базовую
+            level_5_base_speed = 0.3  # Базовая скорость на уровне 1
+            level_5_speed_step = level_5_base_speed * 0.03
+            level_5_speed = level_5_base_speed + (5 - 1) * level_5_speed_step # Скорость на уровне 5: 0.3 + 4 * 0.009 = 0.336
 
-        max_speed_cap = 1.5 # Максимальная скорость пришельцев
-        return min(current_speed, max_speed_cap)
+            # Рассчитываем множитель скорости, который увеличивается каждые 5 уровней
+            # math.floor((level_number - 1) / 5) определяет, сколько раз по 5 уровней пройдено
+            # Например, для уровней 6-10 это будет 1, для 11-15 это будет 2, и т.д.
+            # Множитель увеличивается на 0.05 за каждый такой шаг (например, 1.05, 1.10, ...)
+            speed_multiplier = min(1 + 0.05 * math.floor((level_number - 1) / 5), self.max_speed_factor)
+
+            # Рассчитываем новую скорость путем умножения скорости 5-го уровня на множитель
+            calculated_speed = level_5_speed * speed_multiplier
+
+            # Итоговая скорость ограничивается глобальным максимальным значением self.alien_speed_max (3.0)
+            # Русский комментарий: Итоговая скорость пришельцев.
+            return min(calculated_speed, self.alien_speed_max)
 
     def calculate_fleet_drop_speed(self, level_number):
-        # Скорость снижения флота: базовая + прирост за уровень, с ограничением сверху
-        base_drop_speed = 8.0  # Начальная скорость снижения на уровне 1
-        drop_speed_step_per_level = base_drop_speed * 0.025 # Прирост 2.5% от базовой скорости за каждый уровень
+        # Расчет скорости снижения флота в зависимости от номера уровня.
+        # Логика аналогична calculate_alien_speed: линейная прогрессия для уровней 1-5,
+        # и множитель для уровней 6 и выше, ограниченный self.max_speed_factor.
+        # Скорость также ограничена глобальным максимумом max_drop_speed_cap.
 
-        # Рассчитанная скорость для текущего уровня
-        current_drop_speed = base_drop_speed + (level_number - 1) * drop_speed_step_per_level
+        max_drop_speed_cap = 20.0 # Максимальная скорость снижения флота (глобальный кап)
 
-        max_drop_speed_cap = 20.0 # Максимальная скорость снижения флота
-        return min(current_drop_speed, max_drop_speed_cap)
+        if level_number < 6:
+            # Старая логика для уровней 1-5
+            # Скорость снижения флота: базовая + прирост за уровень, с ограничением сверху
+            base_drop_speed = 8.0  # Начальная скорость снижения на уровне 1
+            drop_speed_step_per_level = base_drop_speed * 0.025 # Прирост 2.5% от базовой скорости за каждый уровень
+            # Рассчитанная скорость для текущего уровня
+            current_drop_speed = base_drop_speed + (level_number - 1) * drop_speed_step_per_level
+            # Возвращаем минимальное значение между рассчитанной скоростью и глобальным капом
+            return min(current_drop_speed, max_drop_speed_cap)
+        else:
+            # Новая логика для уровней 6 и выше
+            # Рассчитываем скорость снижения для уровня 5 по старой формуле как базовую
+            level_5_base_drop_speed = 8.0
+            level_5_drop_step = level_5_base_drop_speed * 0.025
+            level_5_drop_speed = level_5_base_drop_speed + (5 - 1) * level_5_drop_step # Скорость на уровне 5: 8.0 + 4 * 0.2 = 8.8
+
+            # Рассчитываем множитель скорости, аналогично скорости пришельцев
+            speed_multiplier = min(1 + 0.05 * math.floor((level_number - 1) / 5), self.max_speed_factor)
+
+            # Рассчитываем новую скорость снижения
+            calculated_drop_speed = level_5_drop_speed * speed_multiplier
+
+            # Итоговая скорость снижения ограничивается глобальным максимальным значением max_drop_speed_cap (20.0)
+            # Русский комментарий: Итоговая скорость снижения флота.
+            return min(calculated_drop_speed, max_drop_speed_cap)
 
     def calculate_aliens_per_row_factor(self, level_number):
         # Фактор для количества пришельцев в ряду: базовый + прирост, с ограничением
@@ -158,18 +213,26 @@ class Settings():
         return min(current_factor, max_factor_cap)
 
     def calculate_alien_rows_factor(self, level_number):
-        # Фактор для количества рядов пришельцев: базовый + прирост, с ограничением
+        # Фактор для количества рядов пришельцев: базовый + прирост, с ограничением.
         # Этот фактор влияет на то, какую часть экрана по вертикали занимают пришельцы.
-        # Больший фактор = больше рядов пришельцев.
+        # Больший фактор = больше рядов пришельцев (до определенного предела).
+        # Для уровней 6 и выше, этот фактор рассчитывается как для уровня 5,
+        # а фактическое добавление рядов будет управляться self.additional_alien_rows.
+
+        # Русский комментарий: Определяем эффективный уровень для расчета базового фактора.
+        # Для уровней 6 и выше, используем настройки 5-го уровня как основу.
+        effective_level_for_factor = min(level_number, 5)
+
         base_alien_rows_factor = 0.5  # Начальный фактор на уровне 1
         # Увеличиваем на 0.0075 за уровень, чтобы ряды добавлялись плавно
         factor_step_per_level = 0.0075
 
-        # Рассчитанный фактор для текущего уровня
-        current_factor = base_alien_rows_factor + (level_number - 1) * factor_step_per_level
+        # Рассчитанный фактор для текущего (или эффективного) уровня
+        current_factor = base_alien_rows_factor + (effective_level_for_factor - 1) * factor_step_per_level
 
         # Максимальный фактор, чтобы пришельцы не занимали весь экран и оставалось место для маневра
         max_factor_cap = 0.9
+        # Русский комментарий: Итоговый фактор для расчета базового количества рядов.
         return min(current_factor, max_factor_cap)
 
     def calculate_alien_points(self, level_number):
@@ -290,6 +353,17 @@ class Settings():
         self.current_aliens_per_row_factor = level_config['aliens_per_row_factor']
         self.current_alien_rows_factor = level_config['alien_rows_factor']
 
+        # Русский комментарий: Установка количества дополнительных рядов пришельцев.
+        # Для уровней 1-5 дополнительных рядов нет.
+        # Начиная с уровня 6, каждые 5 уровней добавляется один дополнительный ряд.
+        if level_number >= 6:
+            # math.floor((level_number - 1) / 5) определяет количество полных "пятерок" уровней сверх первого.
+            # Например, для уровней 6-10 это 1, для 11-15 это 2, и т.д.
+            self.additional_alien_rows = math.floor((level_number - 1) / 5)
+        else:
+            self.additional_alien_rows = 0
+        # print(f"Level {level_number}: Additional alien rows set to {self.additional_alien_rows}") # Для отладки
+
         # Настройки бонусов, загруженные для текущего уровня
         self.current_shield_spawn_chance = level_config['shield_spawn_chance']
         self.current_shield_min_cooldown = level_config['shield_min_cooldown']
@@ -297,23 +371,27 @@ class Settings():
         self.current_double_fire_min_cooldown = level_config['double_fire_min_cooldown']
         self.current_powerup_general_min_level_time = level_config['powerup_general_min_level_time']
 
-        # Расчет и установка скоростей падения бонусов
-        # Базовая скорость падения - процент от начальной скорости пришельцев на данном уровне
-        base_powerup_speed = self.min_alien_speed * 0.55
+        # Расчет скорости падения бонусов
+        base_fall_speed_ratio = 0.50 # Базовая скорость падения бонуса (50% от минимальной скорости пришельцев на данном уровне)
+        base_powerup_speed = self.min_alien_speed * base_fall_speed_ratio
 
-        # Масштабирование скорости падения с уровнем
-        # Небольшое увеличение скорости падения за уровень (например, 0.5% за уровень после первого)
-        speed_increase_factor = 1 + (level_number - 1) * 0.005
+        powerup_speed_multiplier = 1.0 # Множитель скорости падения для уровней 6+
+        if level_number >= 6:
+            # Множитель увеличивается на 0.05 за каждые 5 уровней (аналогично скорости пришельцев)
+            powerup_speed_multiplier = 1 + 0.05 * math.floor((level_number - 1) / 5)
+            # Ограничение множителя скорости падения (аналогично пришельцам, используем тот же self.max_speed_factor)
+            powerup_speed_multiplier = min(powerup_speed_multiplier, self.max_speed_factor)
 
-        calculated_shield_speed = base_powerup_speed * speed_increase_factor
-        calculated_df_speed = base_powerup_speed * speed_increase_factor
+        # Итоговая скорость падения бонуса
+        final_powerup_speed = base_powerup_speed * powerup_speed_multiplier
 
-        # Максимальное ограничение для скорости падения бонусов
-        # Например, не более чем 80% от начальной скорости пришельцев на этом уровне
-        max_powerup_speed_cap = self.min_alien_speed * 0.8
+        # Ограничение: скорость падения не должна превышать минимальную скорость пришельцев на уровне
+        max_powerup_speed_cap = self.min_alien_speed
+        final_powerup_speed = min(final_powerup_speed, max_powerup_speed_cap)
 
-        self.current_shield_powerup_speed = min(calculated_shield_speed, max_powerup_speed_cap)
-        self.current_double_fire_powerup_speed = min(calculated_df_speed, max_powerup_speed_cap)
+        # Устанавливаем рассчитанную скорость для всех типов бонусов
+        self.current_shield_powerup_speed = final_powerup_speed
+        self.current_double_fire_powerup_speed = final_powerup_speed
 
         # fleet_direction = 1 обозначает движение вправо, а -1 влево.
         # Направление сбрасывается на каждом уровне или при инициализации.

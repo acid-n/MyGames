@@ -11,6 +11,7 @@ from ship import Ship
 from bullet import Bullet
 from alien import Alien
 from powerup import PowerUp
+from starfield import Starfield # Импорт класса Starfield
 import random
 import math # Импортируем math для floor, ceil, или других функций, если понадобятся. lerp определим сами.
 
@@ -35,6 +36,9 @@ class AlienInvasion:
 
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
         pygame.display.set_caption("Alien Invasion")
+
+        # Создание экземпляра звездного поля
+        self.starfield = Starfield(self.screen, self.settings.screen_width, self.settings.screen_height)
 
         # Создание экземпляра для хранения игровой статистики
         self.stats = GameStats(self)
@@ -79,19 +83,23 @@ class AlienInvasion:
         # self._create_fleet() # Убрано отсюда
 
         self.powerups = pygame.sprite.Group()
-        self.last_double_fire_spawn_time = 0 # Время последнего появления бонуса "Двойной выстрел"
-        self.last_shield_spawn_time = 0 # Время последнего появления бонуса "Щит"
-        self.level_start_time = 0 # Время начала текущего уровня (в тиках)
+        # self.last_double_fire_spawn_time = 0 # Удалено: Заменено системой "мешка с шариками"
+        # self.last_shield_spawn_time = 0 # Удалено: Заменено системой "мешка с шариками"
+        self.level_start_time = 0 # Время начала текущего уровня (в тиках) - может использоваться для других механик
 
-        # Счетчики для гарантированного выпадения бонуса
+        # Счетчики волны (могут быть полезны для других целей или статистики)
         self.aliens_in_wave = 0 # Общее количество пришельцев в текущей волне
         self.aliens_destroyed_current_wave = 0 # Количество уничтоженных пришельцев в текущей волне
-        self.guaranteed_powerup_spawned_this_wave = False # Флаг, был ли уже гарантированный бонус в этой волне
+        # self.guaranteed_powerup_spawned_this_wave = False # Удалено: Заменено системой "мешка с шариками"
 
     def run_game(self):
         """Запуск основного цикла игры"""
         while True:
             self._check_events()
+
+            # Обновление состояния звездного поля (прокрутка)
+            # Выполняется всегда, чтобы звезды двигались даже в меню или на паузе.
+            self.starfield.update()
 
             if self.game_state == self.STATE_PLAYING:
                 self.ship.update()
@@ -182,14 +190,14 @@ class AlienInvasion:
         self.settings.initialize_dynamic_settings(self.stats.level) # Load settings for level 1
         self.stats.game_active = True
         self.game_state = self.STATE_PLAYING # Установка активного состояния игры
-        self.last_double_fire_spawn_time = 0 # Сброс таймера кулдауна для "Двойного выстрела"
-        self.last_shield_spawn_time = 0 # Сброс таймера кулдауна для "Щита"
+        # self.last_double_fire_spawn_time = 0 # Удалено
+        # self.last_shield_spawn_time = 0 # Удалено
         self.level_start_time = pygame.time.get_ticks() # Установка времени начала уровня
 
-        # Сброс счетчиков для гарантированного бонуса при новой игре
+        # Сброс счетчиков волны
         self.aliens_in_wave = 0
         self.aliens_destroyed_current_wave = 0
-        self.guaranteed_powerup_spawned_this_wave = False
+        # self.guaranteed_powerup_spawned_this_wave = False # Удалено
 
         self.sb.prep_score()
         self.sb.prep_level()
@@ -274,73 +282,16 @@ class AlienInvasion:
                     self.stats.score += self.settings.alien_points # Очки за пришельца
                     self.aliens_destroyed_current_wave += 1 # Увеличиваем счетчик уничтоженных в волне
 
-                    current_game_time = pygame.time.get_ticks()
-
-                    # --- Логика гарантированного появления бонуса ---
-                    # Проверяем, если еще не было гарантированного бонуса в этой волне
-                    # и уничтожено достаточно пришельцев (например, 75%)
-                    if not self.guaranteed_powerup_spawned_this_wave and \
-                       self.aliens_in_wave > 0 and \
-                       self.aliens_destroyed_current_wave >= 0.75 * self.aliens_in_wave:
-
-                        spawned_guaranteed = False
-                        # Пытаемся сначала заспавнить "Щит"
-                        if self.stats.level >= 2 and \
-                           hasattr(self.settings, 'current_shield_min_cooldown') and \
-                           (current_game_time - self.last_shield_spawn_time) > self.settings.current_shield_min_cooldown:
-                            # Проверяем также шанс, чтобы не спавнить всегда, если доступно по уровню и КД прошел
-                            # Хотя для гарантированного спавна можно и без random.random() < settings.current_shield_spawn_chance
-                            # Но для консистентности и если шанс 0, то не спавнить.
-                            if hasattr(self.settings, 'current_shield_spawn_chance') and self.settings.current_shield_spawn_chance > 0:
-                                shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
-                                self.powerups.add(shield_powerup)
-                                self.last_shield_spawn_time = current_game_time
-                                self.guaranteed_powerup_spawned_this_wave = True
-                                spawned_guaranteed = True
-
-                        # Если "Щит" не заспавнен (или не мог быть заспавнен) и гарантированный бонус еще не вышел
-                        if not spawned_guaranteed and \
-                           self.stats.level >= 3 and \
-                           hasattr(self.settings, 'current_double_fire_min_cooldown') and \
-                           (current_game_time - self.last_double_fire_spawn_time) > self.settings.current_double_fire_min_cooldown:
-                            if hasattr(self.settings, 'current_double_fire_spawn_chance') and self.settings.current_double_fire_spawn_chance > 0:
-                                df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
-                                self.powerups.add(df_powerup)
-                                self.last_double_fire_spawn_time = current_game_time
-                                self.guaranteed_powerup_spawned_this_wave = True
-                                # spawned_guaranteed = True # Уже не нужно, это последний вариант
-
-                    # --- Обычная логика появления бонусов (если гарантированный еще не выпал) ---
-                    # Проверка общего минимального времени на уровне для появления бонусов
-                    if hasattr(self.settings, 'current_powerup_general_min_level_time') and \
-                       (current_game_time - self.level_start_time) < self.settings.current_powerup_general_min_level_time:
-                        pass # Слишком рано на уровне для бонусов
-                    else:
-                        # Логика появления бонуса "Щит" (если не было гарантированного спавна)
-                        if not self.guaranteed_powerup_spawned_this_wave and \
-                           hasattr(self.settings, 'current_shield_spawn_chance') and \
-                           hasattr(self.settings, 'current_shield_min_cooldown') and \
-                           self.settings.current_shield_spawn_chance > 0 and \
-                           self.stats.level >= 2: # Щит доступен со 2-го уровня
-                            if (current_game_time - self.last_shield_spawn_time) > self.settings.current_shield_min_cooldown:
-                                if random.random() < self.settings.current_shield_spawn_chance:
-                                    shield_powerup = PowerUp(self, 'shield', alien_hit.rect.center)
-                                    self.powerups.add(shield_powerup)
-                                    self.last_shield_spawn_time = current_game_time
-                                    self.guaranteed_powerup_spawned_this_wave = True # Засчитываем как выпавший бонус
-
-                        # Логика появления бонуса "Двойной выстрел" (если не было гарантированного спавна или щита)
-                        if not self.guaranteed_powerup_spawned_this_wave and \
-                           hasattr(self.settings, 'current_double_fire_spawn_chance') and \
-                           hasattr(self.settings, 'current_double_fire_min_cooldown') and \
-                           self.settings.current_double_fire_spawn_chance > 0 and \
-                           self.stats.level >= 3: # Двойной выстрел доступен с 3-го уровня
-                            if (current_game_time - self.last_double_fire_spawn_time) > self.settings.current_double_fire_min_cooldown:
-                                if random.random() < self.settings.current_double_fire_spawn_chance:
-                                    df_powerup = PowerUp(self, 'double_fire', alien_hit.rect.center)
-                                    self.powerups.add(df_powerup)
-                                    self.last_double_fire_spawn_time = current_game_time
-                                    self.guaranteed_powerup_spawned_this_wave = True # Засчитываем как выпавший бонус
+                    # Русский комментарий: Новая логика выпадения бонусов.
+                    # Проверяем, был ли этому пришельцу назначен бонус.
+                    if alien_hit.assigned_powerup_type:
+                        powerup_type = alien_hit.assigned_powerup_type
+                        # Создаем бонус в центре уничтоженного пришельца
+                        new_powerup = PowerUp(self, powerup_type, alien_hit.rect.center)
+                        self.powerups.add(new_powerup)
+                        # Русский комментарий: Старая логика появления бонусов (гарантированного и вероятностного),
+                        # основанная на времени, кулдаунах и шансах, была удалена отсюда.
+                        # Теперь бонусы выпадают только если они были предварительно назначены пришельцу.
 
             self.sb.prep_score()
             self.sb.check_high_score()
@@ -413,31 +364,101 @@ class AlienInvasion:
         alien = Alien(self) # Dummy alien for dimensions
         alien_width, alien_height = alien.rect.size
 
-        # Calculate initial numbers based on screen space and default spacing
-        initial_available_space_x = self.settings.screen_width - (self.settings.fleet_screen_margin_x_factor * alien_width)
-        initial_number_aliens_x = int(initial_available_space_x / (self.settings.alien_horizontal_spacing_factor * alien_width))
+        # Расчет количества пришельцев в ряду (по горизонтали)
+        # Учитываем отступы по краям экрана и между пришельцами.
+        available_space_x = self.settings.screen_width - (self.settings.fleet_screen_margin_x_factor * alien_width)
+        # self.settings.alien_horizontal_spacing_factor включает и самого пришельца, и отступ
+        number_aliens_x_float = available_space_x / (self.settings.alien_horizontal_spacing_factor * alien_width)
+        # Применяем фактор текущего уровня для плотности пришельцев в ряду.
+        # Этот фактор может увеличивать количество пришельцев (если > 1) или уменьшать (если < 1).
+        # Однако, current_aliens_per_row_factor обычно используется для увеличения плотности,
+        # что означает, что он должен быть применен так, чтобы уменьшить эффективный размер
+        # пространства, занимаемого одним пришельцем, или увеличить количество помещающихся.
+        # Логика изначальная: initial_number_aliens_x * factor.
+        # Если factor = 1, то это базовое количество. Если factor > 1, то пришельцев больше.
+        # Это означает, что factor должен умножать базовое количество.
+        base_number_aliens_x = int(number_aliens_x_float) # Базовое количество без фактора плотности
+        number_aliens_x = int(base_number_aliens_x * self.settings.current_aliens_per_row_factor)
+        number_aliens_x = max(1, number_aliens_x) # Как минимум один пришелец в ряду
 
+        # Расчет количества рядов пришельцев (по вертикали) с учетом новых правил
         ship_height = self.ship.rect.height
-        initial_available_space_y = (self.settings.screen_height - (self.settings.fleet_top_margin_factor * alien_height) - ship_height)
-        initial_number_rows = int(initial_available_space_y / (self.settings.alien_vertical_spacing_factor * alien_height))
+        # Русский комментарий: Рассчитываем доступное вертикальное пространство для пришельцев,
+        # оставляя буфер от корабля (например, 2 высоты пришельца).
+        available_height_for_aliens = (self.settings.screen_height -
+                                       (self.settings.fleet_top_margin_factor * alien_height) -
+                                       ship_height -
+                                       (2 * alien_height)) # Буфер в 2 высоты пришельца от корабля
 
-        # Apply level-specific factors
-        number_aliens_x = int(initial_number_aliens_x * self.settings.current_aliens_per_row_factor)
-        number_rows = int(initial_number_rows * self.settings.current_alien_rows_factor)
+        # Русский комментарий: Максимально возможное количество рядов, если бы они занимали все доступное пространство.
+        # self.settings.alien_vertical_spacing_factor включает высоту пришельца и отступ.
+        if (self.settings.alien_vertical_spacing_factor * alien_height) > 0:
+            max_possible_rows = int(available_height_for_aliens / (self.settings.alien_vertical_spacing_factor * alien_height))
+        else:
+            max_possible_rows = 0 # Избегаем деления на ноль, если вертикальный отступ некорректен
+        max_possible_rows = max(0, max_possible_rows) # Убедимся, что не отрицательное
 
-        # Add safeguards
-        number_aliens_x = max(1, number_aliens_x)
-        number_rows = max(1, number_rows)
+        # Русский комментарий: Рассчитываем базовое количество рядов на основе фактора (который ограничен для уровней 6+).
+        # current_alien_rows_factor определяет, какую долю от max_possible_rows занимать.
+        base_number_rows = int(max_possible_rows * self.settings.current_alien_rows_factor)
 
-        # Создание флота вторжения using the calculated numbers
-        for row_number in range(number_rows):
+        # Русский комментарий: Добавляем дополнительные ряды, определенные в settings для высоких уровней.
+        final_number_rows = base_number_rows + self.settings.additional_alien_rows
+
+        # Русский комментарий: Ограничиваем итоговое количество рядов максимально возможным на экране
+        # и гарантируем хотя бы один ряд, если это возможно.
+        final_number_rows = min(final_number_rows, max_possible_rows)
+        final_number_rows = max(1, final_number_rows) if max_possible_rows > 0 else 0
+
+        # Создание флота вторжения
+        # Используем final_number_rows вместо старого number_rows
+        for row_number in range(final_number_rows):
             for alien_number in range(number_aliens_x):
-                self._create_alien(alien_number, row_number, alien_width, alien_height) # Pass alien_width, alien_height
+                self._create_alien(alien_number, row_number, alien_width, alien_height)
 
-        # Инициализация/сброс счетчиков для механики гарантированного бонуса
+        # Инициализация/сброс счетчиков волны (aliens_in_wave, aliens_destroyed_current_wave)
         self.aliens_in_wave = len(self.aliens)
         self.aliens_destroyed_current_wave = 0
-        self.guaranteed_powerup_spawned_this_wave = False
+        # self.guaranteed_powerup_spawned_this_wave = False # Удалено
+
+        # Русский комментарий: Логика предварительного назначения бонусов (система "мешка с шариками").
+        # Эта система определяет, из каких пришельцев выпадут бонусы.
+        enemy_count = len(self.aliens)
+        # Русский комментарий: Базовая доля пришельцев, из которых выпадут бонусы (например, 7%).
+        # Эту долю можно вынести в self.settings, если потребуется гибкая настройка.
+        drop_rate = 0.07
+        # Русский комментарий: Количество бонусов, которое должно выпасть на уровне.
+        # Округляем до ближайшего большего целого, чтобы даже при малом количестве врагов был шанс на бонус.
+        drops_per_level = math.ceil(enemy_count * drop_rate)
+
+        # Русский комментарий: Определяем, какие типы бонусов доступны на текущем уровне.
+        available_powerup_types = []
+        if self.stats.level >= 2: # Щит доступен со 2-го уровня
+            available_powerup_types.append('shield')
+        if self.stats.level >= 3: # Двойной выстрел доступен с 3-го уровня
+            available_powerup_types.append('double_fire')
+        # Сюда можно добавить другие типы бонусов и условия их появления
+
+        if drops_per_level > 0 and available_powerup_types and enemy_count > 0:
+            # Русский комментарий: Убедимся, что не пытаемся назначить больше бонусов, чем есть пришельцев.
+            drops_to_assign = min(drops_per_level, enemy_count)
+
+            # Русский комментарий: Выбираем случайных пришельцев, из которых выпадут бонусы.
+            # random.sample гарантирует, что каждый выбранный пришелец уникален.
+            # Преобразуем self.aliens в список, так как random.sample требует последовательность.
+            try:
+                aliens_for_powerups = random.sample(list(self.aliens), int(drops_to_assign))
+            except ValueError:
+                # Это может произойти, если drops_to_assign > len(list(self.aliens)),
+                # но min() выше должен это предотвращать. На всякий случай.
+                aliens_for_powerups = [] # В случае ошибки, бонусов не будет назначено
+
+            # Русский комментарий: Назначаем каждому выбранному пришельцу случайный тип бонуса из доступных.
+            for alien_obj in aliens_for_powerups:
+                if available_powerup_types: # Дополнительная проверка на случай, если список пуст
+                    chosen_powerup_type = random.choice(available_powerup_types)
+                    alien_obj.assigned_powerup_type = chosen_powerup_type
+                    # print(f"Assigned {chosen_powerup_type} to alien at {alien_obj.rect.topleft}") # Для отладки
 
     def _create_alien(self, alien_number, row_number, alien_width, alien_height): # Accept alien_width, alien_height
         """Создание пришельца и размещение его в ряду"""
@@ -464,7 +485,10 @@ class AlienInvasion:
 
     def _update_screen(self):
         """Обновляет изображения на экране и отображает новый экран"""
-        self.screen.fill(self.settings.bg_color)
+        # self.screen.fill(self.settings.bg_color) # Заменено на отрисовку звездного поля
+        # Отрисовка звездного поля (должна быть первой, чтобы быть на заднем плане)
+        self.starfield.draw()
+
         self.ship.blitme()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
