@@ -58,6 +58,23 @@ class AlienInvasion:
         self.exit_button.rect.centerx = self.screen.get_rect().centerx
         self.exit_button.rect.top = self.new_game_button.rect.bottom + 20
 
+        # Pause Menu Buttons
+        self.resume_button = Button(self, "Продолжить")
+        self.restart_button_paused = Button(self, "Заново")
+        self.main_menu_button = Button(self, "Главное меню")
+
+        # Position Resume button (e.g., centered)
+        self.resume_button.rect.centerx = self.screen.get_rect().centerx
+        self.resume_button.rect.centery = self.screen.get_rect().centery - self.resume_button.rect.height
+
+        # Position Restart button below Resume
+        self.restart_button_paused.rect.centerx = self.screen.get_rect().centerx
+        self.restart_button_paused.rect.top = self.resume_button.rect.bottom + 10 # 10px gap
+
+        # Position Main Menu button below Restart
+        self.main_menu_button.rect.centerx = self.screen.get_rect().centerx
+        self.main_menu_button.rect.top = self.restart_button_paused.rect.bottom + 10
+
         # _create_fleet() будет вызываться в _start_new_game(), а не при инициализации
         # self._create_fleet() # Убрано отсюда
 
@@ -98,12 +115,23 @@ class AlienInvasion:
             if event.type == pygame.QUIT:
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_p: # Pause toggle
+                if event.key == pygame.K_ESCAPE:
                     if self.game_state == self.STATE_PLAYING:
                         self.game_state = self.STATE_PAUSED
+                        pygame.mouse.set_visible(True)
                     elif self.game_state == self.STATE_PAUSED:
                         self.game_state = self.STATE_PLAYING
-                else: # Handle other keydown events only if not 'P' or if 'P' didn't handle it
+                        pygame.mouse.set_visible(False)
+                    elif self.game_state == self.STATE_MENU or self.game_state == self.STATE_GAME_OVER:
+                        sys.exit() # Exit game if ESC pressed in Menu or Game Over
+                elif event.key == pygame.K_p: # Simple Pause toggle (no menu)
+                    if self.game_state == self.STATE_PLAYING:
+                        self.game_state = self.STATE_PAUSED
+                        # No mouse visibility change for 'P' to keep it simple
+                    elif self.game_state == self.STATE_PAUSED:
+                        self.game_state = self.STATE_PLAYING
+                        # No mouse visibility change for 'P'
+                else:
                     self._check_keydown_events(event) # Gameplay related key events
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
@@ -117,7 +145,19 @@ class AlienInvasion:
                         self._start_new_game()
                     elif clicked_exit:
                         sys.exit()
-                # Add other MOUSEBUTTONDOWN checks for other states if needed (e.g. pause screen buttons)
+                elif self.game_state == self.STATE_PAUSED:
+                    clicked_resume = self.resume_button.is_clicked(mouse_pos)
+                    clicked_restart_paused = self.restart_button_paused.is_clicked(mouse_pos)
+                    clicked_main_menu = self.main_menu_button.is_clicked(mouse_pos)
+
+                    if clicked_resume:
+                        self.game_state = self.STATE_PLAYING
+                        pygame.mouse.set_visible(False)
+                    elif clicked_restart_paused:
+                        self._start_new_game() # This already sets state to PLAYING and hides mouse
+                    elif clicked_main_menu:
+                        self.game_state = self.STATE_MENU
+                        pygame.mouse.set_visible(True) # Ensure mouse is visible for menu
 
             # Removed the separate state-specific event processing for K_p here, as it's integrated above.
             # Menu state specific KEYDOWN events (e.g. navigating menu with keys) could go here or in _check_keydown_events
@@ -385,9 +425,23 @@ class AlienInvasion:
             pause_image = self.sb.font.render(pause_text, True,
                                               self.settings.scoreboard_text_color,
                                               None) # None для прозрачного фона текста
-            screen_rect = self.screen.get_rect() # Получаем screen_rect здесь, если он еще не атрибут класса
-            pause_rect = pause_image.get_rect(center=screen_rect.center)
+            screen_rect = self.screen.get_rect()
+            # Position "Пауза" text above the buttons
+            text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - 20 # 20px above resume button
+            pause_rect = pause_image.get_rect(centerx=screen_rect.centerx, top=text_rect_y_offset)
+
+            # Ensure the text is not positioned too high if buttons are very high.
+            # A simple check: if pause_rect.top is less than some margin, adjust it.
+            # For now, assuming buttons are reasonably placed.
+            # if pause_rect.top < 20: # Example margin
+            #    pause_rect.top = 20
+
             self.screen.blit(pause_image, pause_rect)
+
+            # Draw Pause Menu Buttons
+            self.resume_button.draw_button()
+            self.restart_button_paused.draw_button()
+            self.main_menu_button.draw_button()
             # Игровые элементы (корабль, пришельцы, пули, счет) уже отрисованы до этого блока,
             # поэтому они останутся видимыми, но замороженными.
 
