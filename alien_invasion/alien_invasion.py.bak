@@ -2,8 +2,6 @@ import sys
 from time import sleep
 
 import pygame
-import pygame.mixer # Added import
-import os # Added import
 
 from settings import Settings
 from game_stats import GameStats
@@ -14,7 +12,6 @@ from bullet import Bullet
 from alien import Alien
 from powerup import PowerUp
 from starfield import Starfield # Импорт класса Starfield
-from space_object import SpaceObject # Added import
 import random
 import math # Импортируем math для floor, ceil, или других функций, если понадобятся. lerp определим сами.
 
@@ -95,80 +92,6 @@ class AlienInvasion:
         self.aliens_destroyed_current_wave = 0 # Количество уничтоженных пришельцев в текущей волне
         # self.guaranteed_powerup_spawned_this_wave = False # Удалено: Заменено системой "мешка с шариками"
 
-        # Инициализация микшера Pygame
-        pygame.mixer.init() # Можно добавить параметры: frequency, size, channels, buffer
-
-        # Загрузка звуковых эффектов
-        self.sound_laser = None
-        self.sound_powerup = None
-        self.sound_shield_recharge = None
-        self.sounds_explosion = []
-        try:
-            # Русский комментарий: Путь к файлу звука лазера
-            if os.path.exists("assets/audio/sfx/laser/laser01.wav"):
-                self.sound_laser = pygame.mixer.Sound("assets/audio/sfx/laser/laser01.wav")
-            else:
-                print("Аудиофайл не найден: assets/audio/sfx/laser/laser01.wav")
-
-            # Русский комментарий: Путь к файлу звука подбора бонуса
-            if os.path.exists("assets/audio/sfx/powerup/powerup01.wav"):
-                self.sound_powerup = pygame.mixer.Sound("assets/audio/sfx/powerup/powerup01.wav")
-            else:
-                print("Аудиофайл не найден: assets/audio/sfx/powerup/powerup01.wav")
-
-            # Русский комментарий: Путь к файлу звука перезарядки щита
-            if os.path.exists("assets/audio/sfx/shield/shield_recharge.wav"):
-                self.sound_shield_recharge = pygame.mixer.Sound("assets/audio/sfx/shield/shield_recharge.wav")
-            else:
-                print("Аудиофайл не найден: assets/audio/sfx/shield/shield_recharge.wav")
-
-            # Русский комментарий: Загрузка нескольких звуков взрыва
-            for i in range(1, 4): # Предполагаем имена explosion01.wav, explosion02.wav, explosion03.wav
-                sound_path = f"assets/audio/sfx/explosion/explosion0{i}.wav"
-                if os.path.exists(sound_path):
-                    self.sounds_explosion.append(pygame.mixer.Sound(sound_path))
-                else:
-                    print(f"Аудиофайл взрыва не найден: {sound_path}")
-            if not self.sounds_explosion:
-                print("Внимание: Ни один звук взрыва не был загружен (файлы не найдены или их меньше 3).")
-
-        except pygame.error as e:
-            print(f"Ошибка инициализации или загрузки звуковых эффектов: {e}")
-
-        # Русский комментарий: Загрузка и воспроизведение фоновой музыки
-        try:
-            if os.path.exists("assets/audio/music/outer_space_loop.ogg"):
-                pygame.mixer.music.load("assets/audio/music/outer_space_loop.ogg")
-                pygame.mixer.music.set_volume(0.25)  # Громкость 25%
-                pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
-            else:
-                print("Файл фоновой музыки assets/audio/music/outer_space_loop.ogg не найден.")
-        except pygame.error as e:
-            print(f"Ошибка загрузки или воспроизведения музыки: {e}")
-
-        # Загрузка UI иконок для меню и паузы
-        self.pause_icon = None
-        icon_size_ui = (32, 32)
-
-        try:
-            pause_icon_path = "assets/gfx/ui/icons/pause.png" # Иконка для экрана паузы
-            if os.path.exists(pause_icon_path):
-                self.pause_icon = pygame.image.load(pause_icon_path)
-                self.pause_icon = pygame.transform.scale(self.pause_icon, icon_size_ui)
-            else:
-                print(f"Иконка не найдена: {pause_icon_path}")
-            # Иконка gear.png (меню) пока не используется напрямую в кнопках, загрузка пропущена
-        except pygame.error as e:
-            print(f"Ошибка загрузки UI иконок для AlienInvasion: {e}")
-
-        # Русский комментарий: Группа для процедурных космических объектов (планеты, галактики)
-        self.space_objects = pygame.sprite.Group()
-        self.last_space_object_spawn_time = pygame.time.get_ticks()
-        # Интервал спавна: 40 +/- 8 секунд (в миллисекундах)
-        self.space_object_spawn_interval_min = (40 - 8) * 1000
-        self.space_object_spawn_interval_max = (40 + 8) * 1000
-        self.current_spawn_interval = random.randint(self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
-
     def run_game(self):
         """Запуск основного цикла игры"""
         while True:
@@ -191,8 +114,6 @@ class AlienInvasion:
                 self._update_aliens()
                 self.powerups.update()
                 self._check_ship_powerup_collisions()
-                self._try_spawn_space_object()
-                self.space_objects.update()
             elif self.game_state == self.STATE_MENU:
                 # Placeholder for menu update logic (e.g., self._update_menu())
                 pass
@@ -335,9 +256,6 @@ class AlienInvasion:
             if len(self.bullets) < self.settings.bullets_allowed:
                 new_bullet = Bullet(self)
                 self.bullets.add(new_bullet)
-            # Русский комментарий: Воспроизведение звука выстрела
-            if self.sound_laser:
-                self.sound_laser.play()
 
     def _update_bullets(self):
         """Обновляет позиции снарядов и удаляет старые пули"""
@@ -363,9 +281,6 @@ class AlienInvasion:
                 for alien_hit in aliens_collided_list:
                     self.stats.score += self.settings.alien_points # Очки за пришельца
                     self.aliens_destroyed_current_wave += 1 # Увеличиваем счетчик уничтоженных в волне
-                    # Русский комментарий: Воспроизведение случайного звука взрыва
-                    if self.sounds_explosion: # Убедимся, что список звуков не пуст
-                        random.choice(self.sounds_explosion).play()
 
                     # Русский комментарий: Новая логика выпадения бонусов.
                     # Проверяем, был ли этому пришельцу назначен бонус.
@@ -545,9 +460,9 @@ class AlienInvasion:
                     alien_obj.assigned_powerup_type = chosen_powerup_type
                     # print(f"Assigned {chosen_powerup_type} to alien at {alien_obj.rect.topleft}") # Для отладки
 
-    def _create_alien(self, alien_number, row_number, alien_width, alien_height, specific_image_path=None): # Accept alien_width, alien_height, and optional specific_image_path
+    def _create_alien(self, alien_number, row_number, alien_width, alien_height): # Accept alien_width, alien_height
         """Создание пришельца и размещение его в ряду"""
-        alien = Alien(self, specific_image_path=specific_image_path) # Pass specific_image_path to Alien constructor
+        alien = Alien(self)
         # alien_width, alien_height = alien.rect.size # Not needed if passed as args
         alien.x = alien_width + self.settings.alien_horizontal_spacing_factor * alien_width * alien_number
         alien.rect.x = alien.x
@@ -570,10 +485,9 @@ class AlienInvasion:
 
     def _update_screen(self):
         """Обновляет изображения на экране и отображает новый экран"""
-        # self.screen.fill(self.settings.bg_color) # Заменено на фон из Starfield.draw()
+        # self.screen.fill(self.settings.bg_color) # Заменено на отрисовку звездного поля
         # Отрисовка звездного поля (должна быть первой, чтобы быть на заднем плане)
         self.starfield.draw()
-        self.space_objects.draw(self.screen)
 
         self.ship.blitme()
         for bullet in self.bullets.sprites():
@@ -605,15 +519,7 @@ class AlienInvasion:
             # if pause_rect.top < 20: # Example margin
             #    pause_rect.top = 20
 
-            # Русский комментарий: Отрисовка иконки паузы, если она есть
-            if self.pause_icon:
-                pause_icon_rect = self.pause_icon.get_rect(centerx=screen_rect.centerx)
-                # Позиционируем иконку над текстом "Пауза" или вместо него
-                pause_icon_rect.bottom = pause_rect.top - 10 # 10px над текстом
-                if pause_icon_rect.top < 20 : pause_icon_rect.top = 20 # Не слишком высоко
-                self.screen.blit(self.pause_icon, pause_icon_rect)
-
-            self.screen.blit(pause_image, pause_rect) # Отрисовка текста "Пауза"
+            self.screen.blit(pause_image, pause_rect)
 
             # Draw Pause Menu Buttons
             self.resume_button.draw_button()
@@ -631,36 +537,9 @@ class AlienInvasion:
         for powerup in collected_powerups:
             if powerup.powerup_type == 'shield':
                 self.ship.activate_shield()
-                # Русский комментарий: Воспроизведение звука активации щита
-                if self.sound_shield_recharge:
-                    self.sound_shield_recharge.play()
             elif powerup.powerup_type == 'double_fire': # Обработка сбора бонуса "Двойной выстрел"
                 self.ship.activate_double_fire()
-                # Русский комментарий: Воспроизведение звука подбора бонуса
-                if self.sound_powerup:
-                    self.sound_powerup.play()
             # Добавить elif для других типов бонусов, если они появятся позже
-
-    def _try_spawn_space_object(self):
-        # Русский комментарий: Пытается создать новый космический объект, если пришло время.
-        current_time = pygame.time.get_ticks()
-        if current_time - self.last_space_object_spawn_time > self.current_spawn_interval:
-            if self.settings.planet_sprite_paths: # Если есть доступные спрайты
-                image_path = random.choice(self.settings.planet_sprite_paths)
-
-                new_object = SpaceObject(
-                    screen_width=self.settings.screen_width,
-                    screen_height=self.settings.screen_height,
-                    image_path=image_path,
-                    # target_size_ratio_range, speed, fade_duration_ms - используются значения по умолчанию из SpaceObject
-                )
-                self.space_objects.add(new_object)
-                # print(f"Spawned SpaceObject: {image_path}") # Для отладки
-
-                self.last_space_object_spawn_time = current_time
-                self.current_spawn_interval = random.randint(self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
-            # else:
-                # print("Нет доступных спрайтов для космических объектов.") # Для отладки
 
 if __name__ == '__main__':
     # Создание экземпляра и запуск игры

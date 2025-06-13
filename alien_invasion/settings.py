@@ -58,8 +58,9 @@ class Settings():
         self.alien_vertical_spacing_factor = 2.0
 
         # Resource paths
-        self.ship_image_path = os.path.join(_IMAGES_DIR, 'ship.bmp')
-        self.alien_image_path = os.path.join(_IMAGES_DIR, 'alien.bmp')
+        self.ship_image_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'ships', 'player', 'playerShip3_blue.png') # Путь относительно settings.py
+        # self.alien_image_path - теперь список alien_sprite_paths
+        # self.alien_image_path = os.path.join(_IMAGES_DIR, 'alien.bmp')
 
         # High score storage
         self.highscore_filepath = os.path.join(_SETTINGS_DIR, "highscore.json")
@@ -396,6 +397,42 @@ class Settings():
         # fleet_direction = 1 обозначает движение вправо, а -1 влево.
         # Направление сбрасывается на каждом уровне или при инициализации.
         self.fleet_direction = 1
+
+        # Русский комментарий: Пути к спрайтам пришельцев
+        self.alien_sprite_paths = []
+        base_alien_gfx_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'ships', 'aliens')
+        for i in range(1, 13): # Предполагаем 12 спрайтов alien_ship_01.png ... alien_ship_12.png
+            path = os.path.join(base_alien_gfx_path, f"alien_ship_{i:02d}.png") # Например, alien_ship_01.png
+            if os.path.exists(path):
+                self.alien_sprite_paths.append(path)
+            else:
+                print(f"Предупреждение: Спрайт пришельца не найден - {path}")
+
+        if not self.alien_sprite_paths:
+            print("Критическая ошибка: Ни один спрайт пришельца не загружен. Используется fallback 'alien.bmp'.")
+            # Fallback на старый спрайт, если новые не найдены
+            # _IMAGES_DIR is defined globally, so we can use it directly.
+            self.alien_sprite_paths.append(os.path.join(_IMAGES_DIR, 'alien.bmp'))
+
+        self.current_alien_image_path = None # Будет устанавливаться в Alien.__init__
+
+        # Русский комментарий: Пути к спрайтам планет и галактик
+        self.planet_sprite_paths = []
+        base_planet_gfx_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'planets')
+        # Предположим, что файлы называются planet01.png, planet02.png, galaxy01.png и т.д.
+        # Пользователю нужно будет обеспечить наличие этих файлов.
+        # Пример нескольких файлов:
+        planet_files = ["planet01.png", "planet02.png", "planet03.png", "galaxy01.png", "galaxy02.png"]
+        for p_file in planet_files:
+            path = os.path.join(base_planet_gfx_path, p_file)
+            if os.path.exists(path):
+                self.planet_sprite_paths.append(path)
+            else:
+                print(f"Предупреждение: Спрайт планеты/галактики не найден - {path}")
+
+        if not self.planet_sprite_paths:
+            print("Информация: Ни один спрайт планеты/галактики не загружен.")
+            # Можно добавить дефолтный, если это критично, но для фоновых объектов это может быть не обязательно.
 
     def load_level_settings(self, new_level_number):
         """Загружает настройки для нового уровня, используя динамические расчеты."""
