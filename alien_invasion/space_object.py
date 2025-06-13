@@ -14,7 +14,7 @@ class SpaceObject(pygame.sprite.Sprite):
         try:
             self.original_image = pygame.image.load(image_path).convert_alpha()
         except pygame.error as e:
-            print(f"Не удалось загрузить изображение космического объекта: {image_path} - {e}")
+            print(f"WARNING: Failed to load space object image: {image_path} - {e}. Using fallback.")
             # Создаем простой fallback-объект (например, серый круг)
             fallback_diameter = int(screen_width * (target_size_ratio_range[0] + target_size_ratio_range[1]) / 2)
             self.original_image = pygame.Surface((fallback_diameter, fallback_diameter), pygame.SRCALPHA)

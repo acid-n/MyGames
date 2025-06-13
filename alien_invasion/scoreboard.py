@@ -33,10 +33,10 @@ class Scoreboard():
                 self.heart_icon = pygame.image.load(heart_icon_path)
                 self.heart_icon = pygame.transform.scale(self.heart_icon, icon_size)
             else:
-                print(f"Иконка не найдена: {heart_icon_path}")
+                print(f"WARNING: UI asset not found: {heart_icon_path}. Feature may be disabled or use fallback.")
 
         except pygame.error as e:
-            print(f"Ошибка загрузки UI иконок для Scoreboard: {e}")
+            print(f"WARNING: UI asset not found: Error loading UI icons for Scoreboard: {e}. Feature may be disabled or use fallback.")
 
         # Загрузка элементов Sci-Fi рамки для счета
         self.score_frame_elements = {}
@@ -55,9 +55,9 @@ class Scoreboard():
                 # Предполагаем, что рамка будет вокруг текущего счета и рекорда.
                 # Размеры рамки нужно будет адаптировать.
                 self.score_frame_active = True # Помечаем, что хотя бы фон загружен
-                print(f"Фоновый элемент рамки '{frame_bg_path}' загружен.")
+                print(f"INFO: UI asset loaded: Score frame background '{frame_bg_path}'.")
             else:
-                print(f"Фоновый элемент рамки '{frame_bg_path}' не найден. Рамка не будет активна.")
+                print(f"WARNING: UI asset not found: Score frame background '{frame_bg_path}'. Frame will be inactive.")
                 self.score_frame_active = False
 
             # Дополнительно можно загрузить углы и грани, если используется 9-patch подход
@@ -66,7 +66,7 @@ class Scoreboard():
             # Пока ограничимся фоном для простоты.
 
         except pygame.error as e:
-            print(f"Ошибка загрузки элементов рамки: {e}")
+            print(f"WARNING: UI asset not found: Error loading score frame elements: {e}. Frame will be inactive.")
             self.score_frame_active = False
 
         # Подготовка изображений счетов
