@@ -60,7 +60,7 @@ class Alien(Sprite):
         try:
             self.image = pygame.image.load(self.image_path).convert_alpha()
         except pygame.error as e:
-            print(f"Не удалось загрузить спрайт пришельца: {self.image_path} - {e}")
+            print(f"WARNING: Failed to load alien sprite: {self.image_path} - {e}. Using fallback.")
             self.image = pygame.Surface([40,40]) # Fallback: зеленый квадрат
             self.image.fill((0,255,0))
 

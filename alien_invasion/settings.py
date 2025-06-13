@@ -19,6 +19,9 @@ class Settings():
         # Используется для уровней 6 и выше
         self.max_speed_factor = 2.0 # Максимальный множитель скорости
 
+        # Audio settings
+        self.audio_enabled = True # Global flag for enabling/disabling audio
+
         # Параметры экрана
         self.screen_width = 1200
         self.screen_height = 800
@@ -406,10 +409,10 @@ class Settings():
             if os.path.exists(path):
                 self.alien_sprite_paths.append(path)
             else:
-                print(f"Предупреждение: Спрайт пришельца не найден - {path}")
+                print(f"WARNING: Asset not found: Alien sprite not found - {path}")
 
         if not self.alien_sprite_paths:
-            print("Критическая ошибка: Ни один спрайт пришельца не загружен. Используется fallback 'alien.bmp'.")
+            print("CRITICAL ERROR: No alien sprites loaded. Using fallback 'alien.bmp'.")
             # Fallback на старый спрайт, если новые не найдены
             # _IMAGES_DIR is defined globally, so we can use it directly.
             self.alien_sprite_paths.append(os.path.join(_IMAGES_DIR, 'alien.bmp'))
@@ -428,10 +431,10 @@ class Settings():
             if os.path.exists(path):
                 self.planet_sprite_paths.append(path)
             else:
-                print(f"Предупреждение: Спрайт планеты/галактики не найден - {path}")
+                print(f"WARNING: Asset not found: Planet/Galaxy sprite not found - {path}")
 
         if not self.planet_sprite_paths:
-            print("Информация: Ни один спрайт планеты/галактики не загружен.")
+            print("INFO: No planet/galaxy sprites loaded.")
             # Можно добавить дефолтный, если это критично, но для фоновых объектов это может быть не обязательно.
 
     def load_level_settings(self, new_level_number):

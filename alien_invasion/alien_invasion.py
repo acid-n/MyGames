@@ -35,6 +35,12 @@ class AlienInvasion:
     def __init__(self):
         """Инициализирует игру и создает игровые ресурсы"""
         pygame.init()
+
+        # Check for extended image support (PNG)
+        if not pygame.image.get_extended():
+            print("ERROR: Pygame was not built with extended image support (e.g., for PNG loading). Please check Pygame installation.")
+            sys.exit("Pygame lacks PNG support. Make sure SDL_image is installed with PNG support.")
+
         self.settings = Settings()
 
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
@@ -95,56 +101,85 @@ class AlienInvasion:
         self.aliens_destroyed_current_wave = 0 # Количество уничтоженных пришельцев в текущей волне
         # self.guaranteed_powerup_spawned_this_wave = False # Удалено: Заменено системой "мешка с шариками"
 
-        # Инициализация микшера Pygame
-        pygame.mixer.init() # Можно добавить параметры: frequency, size, channels, buffer
+        # --- Start of new audio initialization sequence ---
+        self.sound_system_initialized = False
+        try:
+            pygame.mixer.init() # Default parameters
+            self.sound_system_initialized = True
+            print("INFO: Pygame mixer initialized successfully with default settings.")
+        except pygame.error as e_mixer_default:
+            print(f"WARNING: Default pygame.mixer.init() failed: {e_mixer_default}")
+            print("INFO: Attempting to initialize mixer with SDL_AUDIODRIVER=dummy ...")
+            os.environ['SDL_AUDIODRIVER'] = 'dummy'
+            try:
+                pygame.mixer.init()
+                self.sound_system_initialized = True # Still true, but it's a dummy driver
+                print("INFO: Pygame mixer initialized successfully with SDL_AUDIODRIVER=dummy. Game will have no sound.")
+                self.settings.audio_enabled = False # Update settings flag
+            except pygame.error as e_mixer_dummy:
+                print(f"ERROR: pygame.mixer.init() with SDL_AUDIODRIVER=dummy also failed: {e_mixer_dummy}")
+                print("ERROR: Sound system could not be initialized. Game will run without audio.")
+                self.settings.audio_enabled = False # Update settings flag
+
+        if not self.sound_system_initialized or not self.settings.audio_enabled:
+            print("WARNING: AUDIO SYSTEM IS DISABLED. GAME WILL HAVE NO SOUND EFFECTS OR MUSIC.")
+        # --- End of new audio initialization sequence ---
 
         # Загрузка звуковых эффектов
         self.sound_laser = None
         self.sound_powerup = None
         self.sound_shield_recharge = None
         self.sounds_explosion = []
-        try:
-            # Русский комментарий: Путь к файлу звука лазера
-            if os.path.exists("assets/audio/sfx/laser/laser01.wav"):
-                self.sound_laser = pygame.mixer.Sound("assets/audio/sfx/laser/laser01.wav")
-            else:
-                print("Аудиофайл не найден: assets/audio/sfx/laser/laser01.wav")
 
-            # Русский комментарий: Путь к файлу звука подбора бонуса
-            if os.path.exists("assets/audio/sfx/powerup/powerup01.wav"):
-                self.sound_powerup = pygame.mixer.Sound("assets/audio/sfx/powerup/powerup01.wav")
-            else:
-                print("Аудиофайл не найден: assets/audio/sfx/powerup/powerup01.wav")
-
-            # Русский комментарий: Путь к файлу звука перезарядки щита
-            if os.path.exists("assets/audio/sfx/shield/shield_recharge.wav"):
-                self.sound_shield_recharge = pygame.mixer.Sound("assets/audio/sfx/shield/shield_recharge.wav")
-            else:
-                print("Аудиофайл не найден: assets/audio/sfx/shield/shield_recharge.wav")
-
-            # Русский комментарий: Загрузка нескольких звуков взрыва
-            for i in range(1, 4): # Предполагаем имена explosion01.wav, explosion02.wav, explosion03.wav
-                sound_path = f"assets/audio/sfx/explosion/explosion0{i}.wav"
-                if os.path.exists(sound_path):
-                    self.sounds_explosion.append(pygame.mixer.Sound(sound_path))
+        if self.sound_system_initialized and self.settings.audio_enabled:
+            try:
+                # Русский комментарий: Путь к файлу звука лазера
+                sfx_laser_path = "assets/audio/sfx/laser/laser01.wav"
+                if os.path.exists(sfx_laser_path):
+                    self.sound_laser = pygame.mixer.Sound(sfx_laser_path)
                 else:
-                    print(f"Аудиофайл взрыва не найден: {sound_path}")
-            if not self.sounds_explosion:
-                print("Внимание: Ни один звук взрыва не был загружен (файлы не найдены или их меньше 3).")
+                    print(f"WARNING: Asset loading failed: Sound file not found: {sfx_laser_path}")
 
-        except pygame.error as e:
-            print(f"Ошибка инициализации или загрузки звуковых эффектов: {e}")
+                # Русский комментарий: Путь к файлу звука подбора бонуса
+                sfx_powerup_path = "assets/audio/sfx/powerup/powerup01.wav"
+                if os.path.exists(sfx_powerup_path):
+                    self.sound_powerup = pygame.mixer.Sound(sfx_powerup_path)
+                else:
+                    print(f"WARNING: Asset loading failed: Sound file not found: {sfx_powerup_path}")
 
-        # Русский комментарий: Загрузка и воспроизведение фоновой музыки
-        try:
-            if os.path.exists("assets/audio/music/outer_space_loop.ogg"):
-                pygame.mixer.music.load("assets/audio/music/outer_space_loop.ogg")
-                pygame.mixer.music.set_volume(0.25)  # Громкость 25%
-                pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
-            else:
-                print("Файл фоновой музыки assets/audio/music/outer_space_loop.ogg не найден.")
-        except pygame.error as e:
-            print(f"Ошибка загрузки или воспроизведения музыки: {e}")
+                # Русский комментарий: Путь к файлу звука перезарядки щита
+                sfx_shield_path = "assets/audio/sfx/shield/shield_recharge.wav"
+                if os.path.exists(sfx_shield_path):
+                    self.sound_shield_recharge = pygame.mixer.Sound(sfx_shield_path)
+                else:
+                    print(f"WARNING: Asset loading failed: Sound file not found: {sfx_shield_path}")
+
+                # Русский комментарий: Загрузка нескольких звуков взрыва
+                for i in range(1, 4): # Предполагаем имена explosion01.wav, explosion02.wav, explosion03.wav
+                    sound_path = f"assets/audio/sfx/explosion/explosion0{i}.wav"
+                    if os.path.exists(sound_path):
+                        self.sounds_explosion.append(pygame.mixer.Sound(sound_path))
+                    else:
+                        print(f"WARNING: Asset loading failed: Sound file not found: {sound_path}")
+                if not self.sounds_explosion:
+                    print("WARNING: Asset loading failed: No explosion sounds loaded (files not found or less than 3).")
+
+            except pygame.error as e:
+                print(f"WARNING: Asset loading failed: Error initializing/loading sound effects: {e}")
+
+            # Русский комментарий: Загрузка и воспроизведение фоновой музыки
+            try:
+                music_path = "assets/audio/music/outer_space_loop.ogg"
+                if os.path.exists(music_path):
+                    pygame.mixer.music.load(music_path)
+                    pygame.mixer.music.set_volume(self.settings.music_volume) # Keep dynamic volume if set from settings
+                    pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
+                else:
+                    print(f"WARNING: Asset loading failed: Background music file not found: {music_path}")
+            except pygame.error as e:
+                print(f"WARNING: Asset loading failed: Error loading or playing background music {music_path}: {e}")
+        else:
+            print("INFO: Sound loading skipped as audio system is disabled.")
 
         # Загрузка UI иконок для меню и паузы
         self.pause_icon = None
@@ -156,10 +191,10 @@ class AlienInvasion:
                 self.pause_icon = pygame.image.load(pause_icon_path)
                 self.pause_icon = pygame.transform.scale(self.pause_icon, icon_size_ui)
             else:
-                print(f"Иконка не найдена: {pause_icon_path}")
+                print(f"WARNING: Asset loading failed: UI Icon not found: {pause_icon_path}")
             # Иконка gear.png (меню) пока не используется напрямую в кнопках, загрузка пропущена
         except pygame.error as e:
-            print(f"Ошибка загрузки UI иконок для AlienInvasion: {e}")
+            print(f"WARNING: Asset loading failed: Error loading UI icons for AlienInvasion: {e}")
 
         # Русский комментарий: Группа для процедурных космических объектов (планеты, галактики)
         self.space_objects = pygame.sprite.Group()
@@ -336,7 +371,7 @@ class AlienInvasion:
                 new_bullet = Bullet(self)
                 self.bullets.add(new_bullet)
             # Русский комментарий: Воспроизведение звука выстрела
-            if self.sound_laser:
+            if self.sound_system_initialized and self.settings.audio_enabled and self.sound_laser:
                 self.sound_laser.play()
 
     def _update_bullets(self):
@@ -364,7 +399,7 @@ class AlienInvasion:
                     self.stats.score += self.settings.alien_points # Очки за пришельца
                     self.aliens_destroyed_current_wave += 1 # Увеличиваем счетчик уничтоженных в волне
                     # Русский комментарий: Воспроизведение случайного звука взрыва
-                    if self.sounds_explosion: # Убедимся, что список звуков не пуст
+                    if self.sound_system_initialized and self.settings.audio_enabled and self.sounds_explosion: # Убедимся, что список звуков не пуст
                         random.choice(self.sounds_explosion).play()
 
                     # Русский комментарий: Новая логика выпадения бонусов.
@@ -632,12 +667,12 @@ class AlienInvasion:
             if powerup.powerup_type == 'shield':
                 self.ship.activate_shield()
                 # Русский комментарий: Воспроизведение звука активации щита
-                if self.sound_shield_recharge:
+                if self.sound_system_initialized and self.settings.audio_enabled and self.sound_shield_recharge:
                     self.sound_shield_recharge.play()
             elif powerup.powerup_type == 'double_fire': # Обработка сбора бонуса "Двойной выстрел"
                 self.ship.activate_double_fire()
                 # Русский комментарий: Воспроизведение звука подбора бонуса
-                if self.sound_powerup:
+                if self.sound_system_initialized and self.settings.audio_enabled and self.sound_powerup:
                     self.sound_powerup.play()
             # Добавить elif для других типов бонусов, если они появятся позже
 
