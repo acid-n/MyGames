@@ -134,29 +134,29 @@ class AlienInvasion:
         if self.sound_system_initialized and self.settings.audio_enabled:
             try:
                 # Русский комментарий: Путь к файлу звука лазера
-                sfx_laser_path = "assets/audio/sfx/laser/laser01.wav"
+                sfx_laser_path = "assets/audio/sfx/laser/laser01.ogg"
                 if os.path.exists(sfx_laser_path):
                     self.sound_laser = pygame.mixer.Sound(sfx_laser_path)
                 else:
                     print(f"WARNING: Asset loading failed: Sound file not found: {sfx_laser_path}")
 
                 # Русский комментарий: Путь к файлу звука подбора бонуса
-                sfx_powerup_path = "assets/audio/sfx/powerup/powerup01.wav"
+                sfx_powerup_path = "assets/audio/sfx/powerup/powerup01.ogg"
                 if os.path.exists(sfx_powerup_path):
                     self.sound_powerup = pygame.mixer.Sound(sfx_powerup_path)
                 else:
                     print(f"WARNING: Asset loading failed: Sound file not found: {sfx_powerup_path}")
 
                 # Русский комментарий: Путь к файлу звука перезарядки щита
-                sfx_shield_path = "assets/audio/sfx/shield/shield_recharge.wav"
+                sfx_shield_path = "assets/audio/sfx/shield/shield_recharge.ogg"
                 if os.path.exists(sfx_shield_path):
                     self.sound_shield_recharge = pygame.mixer.Sound(sfx_shield_path)
                 else:
                     print(f"WARNING: Asset loading failed: Sound file not found: {sfx_shield_path}")
 
                 # Русский комментарий: Загрузка нескольких звуков взрыва
-                for i in range(1, 4): # Предполагаем имена explosion01.wav, explosion02.wav, explosion03.wav
-                    sound_path = f"assets/audio/sfx/explosion/explosion0{i}.wav"
+                for i in range(1, 4): # Предполагаем имена explosion01.ogg, explosion02.ogg, explosion03.ogg
+                    sound_path = f"assets/audio/sfx/explosion/explosion0{i}.ogg"
                     if os.path.exists(sound_path):
                         self.sounds_explosion.append(pygame.mixer.Sound(sound_path))
                     else:
@@ -167,17 +167,17 @@ class AlienInvasion:
             except pygame.error as e:
                 print(f"WARNING: Asset loading failed: Error initializing/loading sound effects: {e}")
 
-            # Русский комментарий: Загрузка и воспроизведение фоновой музыки
-            try:
-                music_path = "assets/audio/music/outer_space_loop.ogg"
-                if os.path.exists(music_path):
-                    pygame.mixer.music.load(music_path)
-                    pygame.mixer.music.set_volume(self.settings.music_volume) # Keep dynamic volume if set from settings
-                    pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
-                else:
-                    print(f"WARNING: Asset loading failed: Background music file not found: {music_path}")
-            except pygame.error as e:
-                print(f"WARNING: Asset loading failed: Error loading or playing background music {music_path}: {e}")
+            # Русский комментарий: Загрузка и воспроизведение фоновой музыки (закомментировано)
+            # try:
+            #     music_path = "assets/audio/music/outer_space_loop.ogg"
+            #     if os.path.exists(music_path):
+            #         pygame.mixer.music.load(music_path)
+            #         pygame.mixer.music.set_volume(self.settings.music_volume) # Keep dynamic volume if set from settings
+            #         pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
+            #     else:
+            #         print(f"WARNING: Asset loading failed: Background music file not found: {music_path}")
+            # except pygame.error as e:
+            #     print(f"WARNING: Asset loading failed: Error loading or playing background music {music_path}: {e}")
         else:
             print("INFO: Sound loading skipped as audio system is disabled.")
 
@@ -188,7 +188,7 @@ class AlienInvasion:
         try:
             pause_icon_path = "assets/gfx/ui/icons/pause.png" # Иконка для экрана паузы
             if os.path.exists(pause_icon_path):
-                self.pause_icon = pygame.image.load(pause_icon_path)
+                self.pause_icon = pygame.image.load(pause_icon_path).convert_alpha()
                 self.pause_icon = pygame.transform.scale(self.pause_icon, icon_size_ui)
             else:
                 print(f"WARNING: Asset loading failed: UI Icon not found: {pause_icon_path}")

@@ -404,7 +404,7 @@ class Settings():
         # Русский комментарий: Пути к спрайтам пришельцев
         self.alien_sprite_paths = []
         base_alien_gfx_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'ships', 'aliens')
-        for i in range(1, 13): # Предполагаем 12 спрайтов alien_ship_01.png ... alien_ship_12.png
+        for i in range(1, 25): # Загружаем все 24 спрайта alien_ship_01.png ... alien_ship_24.png
             path = os.path.join(base_alien_gfx_path, f"alien_ship_{i:02d}.png") # Например, alien_ship_01.png
             if os.path.exists(path):
                 self.alien_sprite_paths.append(path)
