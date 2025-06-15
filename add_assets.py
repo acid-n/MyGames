@@ -299,9 +299,9 @@ def main():
 
     # Шаг 3: Добавление файлов в Git и коммит
     print("\n--- Добавление ассетов в Git и коммит ---")
-    
-    gitignore_path = ".gitignore"
-    gitignore_content = """
+
+    gitignore_path = ".gitignore"
+    gitignore_content = """
 # Python
 __pycache__/
 *.pyc
@@ -312,38 +312,38 @@ venv/
 # Temporary assets download folder
 temp_assets_download/
 """
-    if not os.path.exists(gitignore_path):
-        with open(gitignore_path, "w") as f:
-            f.write(gitignore_content.strip())
-        print(f"Создан файл {gitignore_path} для игнорирования временных файлов.")
-    else:
-        with open(gitignore_path, "r+") as f:
-            content = f.read()
-            changed = False
-            if "temp_assets_download/" not in content:
-                f.write("\n# Temporary assets download folder\ntemp_assets_download/\n")
-                changed = True
-            if "venv/" not in content:
-                f.write("\n# Virtual environment\venv/\n")
-                changed = True
-            if changed:
-                print(f"Обновлен файл {gitignore_path} для игнорирования временных файлов и venv.")
-                
-    run_git_command(f"git add {ASSETS_BASE_DIR}") # Добавляем все ассеты
-    run_git_command(f"git add add_assets.py")     # Добавляем сам скрипт
-    run_git_command(f"git add .gitignore")        # Добавляем .gitignore
+    if not os.path.exists(gitignore_path):
+        with open(gitignore_path, "w") as f:
+            f.write(gitignore_content.strip())
+        print(f"Создан файл {gitignore_path} для игнорирования временных файлов.")
+    else:
+        with open(gitignore_path, "r+") as f:
+            content = f.read()
+            changed = False
+            if "temp_assets_download/" not in content:
+                f.write("\n# Temporary assets download folder\ntemp_assets_download/\n")
+                changed = True
+            if "venv/" not in content:
+                f.write("\n# Virtual environment\venv/\n")
+                changed = True
+            if changed:
+                print(f"Обновлен файл {gitignore_path} для игнорирования временных файлов и venv.")
 
-    if run_git_command('git commit -m "Добавлены все необходимые игровые ассеты"'):
-        print("\nКоммит успешно создан. Попытка отправить изменения на удаленный репозиторий...")
-        print("Пожалуйста, убедитесь, что у вас настроены учетные данные Git для 'git push'.")
-        if run_git_command("git push"):
-            print("\nВсе ассеты успешно добавлены в репозиторий и отправлены!")
-        else:
-            print("\nНе удалось отправить изменения на удаленный репозиторий. Попробуйте 'git push' вручную.")
-    else:
-        print("\nНе удалось создать коммит. Возможно, нечего коммитить или есть другие ошибки. Проверьте сообщения выше.")
+    run_git_command(f"git add {ASSETS_BASE_DIR}") # Добавляем все ассеты
+    run_git_command(f"git add add_assets.py")     # Добавляем сам скрипт
+    run_git_command(f"git add .gitignore")        # Добавляем .gitignore
 
-    print("\nПроцесс завершен.")
+    if run_git_command('git commit -m "Добавлены все необходимые игровые ассеты"'):
+        print("\nКоммит успешно создан. Попытка отправить изменения на удаленный репозиторий...")
+        print("Пожалуйста, убедитесь, что у вас настроены учетные данные Git для 'git push'.")
+        if run_git_command("git push"):
+            print("\nВсе ассеты успешно добавлены в репозиторий и отправлены!")
+        else:
+            print("\nНе удалось отправить изменения на удаленный репозиторий. Попробуйте 'git push' вручную.")
+    else:
+        print("\nНе удалось создать коммит. Возможно, нечего коммитить или есть другие ошибки. Проверьте сообщения выше.")
+
+    print("\nПроцесс завершен.")
 
 if __name__ == "__main__":
-    main()
+    main()

@@ -30,7 +30,7 @@ class Scoreboard():
             # Иконка для жизней (сердце)
             heart_icon_path = "assets/gfx/ui/icons/heart.png" # Убедитесь, что имя файла корректно
             if os.path.exists(heart_icon_path):
-                self.heart_icon = pygame.image.load(heart_icon_path)
+                self.heart_icon = pygame.image.load(heart_icon_path).convert_alpha()
                 self.heart_icon = pygame.transform.scale(self.heart_icon, icon_size)
             else:
                 print(f"WARNING: UI asset not found: {heart_icon_path}. Feature may be disabled or use fallback.")
