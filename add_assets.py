@@ -195,9 +195,8 @@ def main():
 
                 elif key == "space_shooter_redux": # Space Shooter Redux - основной источник!
                     redux_base_dir = destination_unzip_dir
-                    # ОБНОВЛЕННЫЕ ПУТИ К sheet.png и sheet.xml
-                    sheet_image_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.png") # <--- Исправлено здесь
-                    sheet_xml_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.xml")   # <--- Исправлено здесь
+                    sheet_image_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.png")
+                    sheet_xml_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.xml")
                     
                     sprite_coords = {}
                     if os.path.exists(sheet_xml_path):
@@ -220,7 +219,7 @@ def main():
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_shieldUp.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "shield", "shield_recharge.ogg"))
                         
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_lose.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "explosion", "explosion01.ogg"))
-                        print("  Звуковые эффекты (лазер, бонус, щит, один взрыв) из Space Shooter Redux скопированы.")
+                        print("  Звуковые эффекты (laзер, бонус, щит, один взрыв) из Space Shooter Redux скопированы.")
                     else:
                         print(f"  Внимание: Папка 'Bonus' со звуками не найдена в распакованном архиве Space Shooter Redux. Звуки не скопированы.")
                     
@@ -330,9 +329,9 @@ temp_assets_download/
             if changed:
                 print(f"Обновлен файл {gitignore_path} для игнорирования временных файлов и venv.")
                 
-    run_git_command(f"git add {ASSETS_BASE_DIR}")
-    run_git_command(f"git add add_assets.py")
-    run_git_command(f"git add {gitignore_path}")
+    run_git_command(f"git add {ASSETS_BASE_DIR}") # Добавляем все ассеты
+    run_git_command(f"git add add_assets.py")     # Добавляем сам скрипт
+    run_git_command(f"git add .gitignore")        # Добавляем .gitignore
 
     if run_git_command('git commit -m "Добавлены все необходимые игровые ассеты"'):
         print("\nКоммит успешно создан. Попытка отправить изменения на удаленный репозиторий...")
