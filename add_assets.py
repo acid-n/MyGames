@@ -17,7 +17,7 @@ DIRECTORIES = [
     os.path.join(ASSETS_BASE_DIR, "gfx", "ui", "frames"),
     os.path.join(ASSETS_BASE_DIR, "gfx", "ui", "misc"),
     os.path.join(ASSETS_BASE_DIR, "gfx", "backgrounds"),
-    os.path.join(ASSETS_BASE_DIR, "gfx", "ships", "player"), # <--- Исправлено здесь
+    os.path.join(ASSETS_BASE_DIR, "gfx", "ships", "player"),
     os.path.join(ASSETS_BASE_DIR, "gfx", "ships", "aliens"),
     os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "laser"),
     os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "powerup"),
@@ -195,8 +195,9 @@ def main():
 
                 elif key == "space_shooter_redux": # Space Shooter Redux - основной источник!
                     redux_base_dir = destination_unzip_dir
-                    sheet_image_path = os.path.join(redux_base_dir, "sheet.png")
-                    sheet_xml_path = os.path.join(redux_base_dir, "sheet.xml")
+                    # ОБНОВЛЕННЫЕ ПУТИ К sheet.png и sheet.xml
+                    sheet_image_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.png") # <--- Исправлено здесь
+                    sheet_xml_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.xml")   # <--- Исправлено здесь
                     
                     sprite_coords = {}
                     if os.path.exists(sheet_xml_path):
@@ -218,7 +219,6 @@ def main():
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_twoTone.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "powerup", "powerup01.ogg"))
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_shieldUp.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "shield", "shield_recharge.ogg"))
                         
-                        # Звуки взрыва - пока только sfx_lose.ogg из Bonus, или нужно найти другие
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_lose.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "explosion", "explosion01.ogg"))
                         print("  Звуковые эффекты (лазер, бонус, щит, один взрыв) из Space Shooter Redux скопированы.")
                     else:
@@ -251,12 +251,9 @@ def main():
                         # UI рамка (blue_panel.png) - используем "buttonBlue.png" из sheet.png
                         extract_sprite_from_sheet(sheet_image_path, "buttonBlue.png", sprite_coords, os.path.join(ASSETS_BASE_DIR, "gfx", "ui", "frames", "blue_panel.png"))
 
-                        # Фоновые элементы (звездное поле) - возьмем что-то большое, например, meteorBrown_big1.png как фон
-                        # Это не идеальный фон, но чтобы что-то было. В оригинальной папке Backgrounds в Redux могут быть лучшие.
-                        # Если нужен реальный фон, проверь папку "Backgrounds" в SpaceShooterRedux-unzipped.
+                        # Фоновые элементы (звездное поле)
                         extract_sprite_from_sheet(sheet_image_path, "meteorBrown_big1.png", sprite_coords, os.path.join(ASSETS_BASE_DIR, "gfx", "backgrounds", "background01.png"))
                         print("  Внимание: Используется 'meteorBrown_big1.png' как фон. Возможно, в папке 'Backgrounds' Space Shooter Redux есть более подходящие фоны, которые можно скопировать вручную.")
-
 
                     else:
                         print("  Невозможно вырезать спрайты из sheet.png, так как координаты не загружены.")
