@@ -158,7 +158,7 @@ def main():
     # Создаем временную директорию
     print(f"Создание временной директории для ручных загрузок: {TEMP_DIR}")
     os.makedirs(TEMP_DIR, exist_ok=True)
-
+    
     print(f"\n--- Использование файлов из '{TEMP_DIR}' ---")
     print("  Убедитесь, что в этой папке находятся следующие файлы:")
     for key, asset_info in ASSETS.items():
@@ -175,7 +175,7 @@ def main():
         print(f"\nОбработка: {key}")
         source_temp_file_path = os.path.join(TEMP_DIR, asset_info["source_temp_file"])
         destination_unzip_dir = asset_info.get("destination_path")
-
+        
         if not os.path.exists(source_temp_file_path):
             print(f"  Внимание: Файл '{source_temp_file_path}' не найден. Пропускаем обработку этого ассета.")
             continue
@@ -197,7 +197,7 @@ def main():
                     redux_base_dir = destination_unzip_dir
                     sheet_image_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.png")
                     sheet_xml_path = os.path.join(redux_base_dir, "Spritesheet", "sheet.xml")
-
+                    
                     sprite_coords = {}
                     if os.path.exists(sheet_xml_path):
                         sprite_coords = get_sprite_coordinates_from_xml(sheet_xml_path)
@@ -217,17 +217,17 @@ def main():
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_laser1.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "laser", "laser01.ogg"))
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_twoTone.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "powerup", "powerup01.ogg"))
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_shieldUp.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "shield", "shield_recharge.ogg"))
-
+                        
                         copy_file(os.path.join(bonus_sounds_dir, "sfx_lose.ogg"), os.path.join(ASSETS_BASE_DIR, "audio", "sfx", "explosion", "explosion01.ogg"))
                         print("  Звуковые эффекты (laзер, бонус, щит, один взрыв) из Space Shooter Redux скопированы.")
                     else:
                         print(f"  Внимание: Папка 'Bonus' со звуками не найдена в распакованном архиве Space Shooter Redux. Звуки не скопированы.")
-
+                    
                     # 2. Вырезаем спрайты из sheet.png
                     if sprite_coords:
                         # Корабль игрока
                         extract_sprite_from_sheet(sheet_image_path, "playerShip3_blue.png", sprite_coords, os.path.join(ASSETS_BASE_DIR, "gfx", "ships", "player", "playerShip3_blue.png"))
-
+                        
                         # Корабли пришельцев (12 штук) - возьмем разных "enemy" из Redux
                         enemy_ships_to_copy = [
                             "enemyRed1.png", "enemyBlue2.png", "enemyGreen3.png", "enemyBlack4.png",
@@ -236,7 +236,7 @@ def main():
                         ]
                         for i, alien_name in enumerate(enemy_ships_to_copy):
                             extract_sprite_from_sheet(sheet_image_path, alien_name, sprite_coords, os.path.join(ASSETS_BASE_DIR, "gfx", "ships", "aliens", f"alien_ship_{i+1:02d}.png"))
-
+                        
                         # Бонусы (спрайты)
                         extract_sprite_from_sheet(sheet_image_path, "powerupBlue_bolt.png", sprite_coords, os.path.join(ASSETS_BASE_DIR, "gfx", "powerups", "powerup_bolt.png"))
                         extract_sprite_from_sheet(sheet_image_path, "powerupBlue_shield.png", sprite_coords, os.path.join(ASSETS_BASE_DIR, "gfx", "powerups", "powerup_shield.png"))
@@ -256,7 +256,7 @@ def main():
 
                     else:
                         print("  Невозможно вырезать спрайты из sheet.png, так как координаты не загружены.")
-
+                
                 elif key == "cc0_spaceship_sprites": # Для дополнительного разнообразия пришельцев
                     aliens_source_dir_candidates = [
                         os.path.join(destination_unzip_dir, "200Starships", "Clean"),
@@ -265,7 +265,7 @@ def main():
                         os.path.join(destination_unzip_dir, "200Starships"),
                         destination_unzip_dir
                     ]
-
+                    
                     aliens_source_dir = None
                     for candidate_dir in aliens_source_dir_candidates:
                         if os.path.exists(candidate_dir):
@@ -275,7 +275,7 @@ def main():
 
                     if aliens_source_dir:
                         alien_ships = [f for f in os.listdir(aliens_source_dir) if f.lower().endswith(".png")]
-
+                        
                         if len(alien_ships) >= 12:
                             print(f"  Копируем 12 дополнительных кораблей пришельцев из '{asset_info['source_temp_file']}'.")
                             for i, ship_file in enumerate(alien_ships[:12]):
@@ -300,8 +300,8 @@ def main():
     # Шаг 3: Добавление файлов в Git и коммит
     print("\n--- Добавление ассетов в Git и коммит ---")
 
-    gitignore_path = ".gitignore"
-    gitignore_content = """
+    gitignore_path = ".gitignore"
+    gitignore_content = """
 # Python
 __pycache__/
 *.pyc
@@ -312,38 +312,38 @@ venv/
 # Temporary assets download folder
 temp_assets_download/
 """
-    if not os.path.exists(gitignore_path):
-        with open(gitignore_path, "w") as f:
-            f.write(gitignore_content.strip())
-        print(f"Создан файл {gitignore_path} для игнорирования временных файлов.")
-    else:
-        with open(gitignore_path, "r+") as f:
-            content = f.read()
-            changed = False
-            if "temp_assets_download/" not in content:
-                f.write("\n# Temporary assets download folder\ntemp_assets_download/\n")
-                changed = True
-            if "venv/" not in content:
-                f.write("\n# Virtual environment\venv/\n")
-                changed = True
-            if changed:
-                print(f"Обновлен файл {gitignore_path} для игнорирования временных файлов и venv.")
+    if not os.path.exists(gitignore_path):
+        with open(gitignore_path, "w") as f:
+            f.write(gitignore_content.strip())
+        print(f"Создан файл {gitignore_path} для игнорирования временных файлов.")
+    else:
+        with open(gitignore_path, "r+") as f:
+            content = f.read()
+            changed = False
+            if "temp_assets_download/" not in content:
+                f.write("\n# Temporary assets download folder\ntemp_assets_download/\n")
+                changed = True
+            if "venv/" not in content:
+                f.write("\n# Virtual environment\venv/\n")
+                changed = True
+            if changed:
+                print(f"Обновлен файл {gitignore_path} для игнорирования временных файлов и venv.")
 
-    run_git_command(f"git add {ASSETS_BASE_DIR}") # Добавляем все ассеты
-    run_git_command(f"git add add_assets.py")     # Добавляем сам скрипт
-    run_git_command(f"git add .gitignore")        # Добавляем .gitignore
+    run_git_command(f"git add {ASSETS_BASE_DIR}") # Добавляем все ассеты
+    run_git_command(f"git add add_assets.py")     # Добавляем сам скрипт
+    run_git_command(f"git add .gitignore")        # Добавляем .gitignore
 
-    if run_git_command('git commit -m "Добавлены все необходимые игровые ассеты"'):
-        print("\nКоммит успешно создан. Попытка отправить изменения на удаленный репозиторий...")
-        print("Пожалуйста, убедитесь, что у вас настроены учетные данные Git для 'git push'.")
-        if run_git_command("git push"):
-            print("\nВсе ассеты успешно добавлены в репозиторий и отправлены!")
-        else:
-            print("\nНе удалось отправить изменения на удаленный репозиторий. Попробуйте 'git push' вручную.")
-    else:
-        print("\nНе удалось создать коммит. Возможно, нечего коммитить или есть другие ошибки. Проверьте сообщения выше.")
+    if run_git_command('git commit -m "Добавлены все необходимые игровые ассеты"'):
+        print("\nКоммит успешно создан. Попытка отправить изменения на удаленный репозиторий...")
+        print("Пожалуйста, убедитесь, что у вас настроены учетные данные Git для 'git push'.")
+        if run_git_command("git push"):
+            print("\nВсе ассеты успешно добавлены в репозиторий и отправлены!")
+        else:
+            print("\nНе удалось отправить изменения на удаленный репозиторий. Попробуйте 'git push' вручную.")
+    else:
+        print("\nНе удалось создать коммит. Возможно, нечего коммитить или есть другие ошибки. Проверьте сообщения выше.")
 
-    print("\nПроцесс завершен.")
+    print("\nПроцесс завершен.")
 
 if __name__ == "__main__":
-    main()
+    main()
