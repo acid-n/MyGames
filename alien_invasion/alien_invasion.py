@@ -5,23 +5,18 @@ import pygame
 import pygame.mixer # Added import
 import os # Added import
 
-from settings import Settings
-from game_stats import GameStats
-from scoreboard import Scoreboard
-from button import Button
-from ship import Ship
-from bullet import Bullet
-from alien import Alien
-from powerup import PowerUp
-from starfield import Starfield # Импорт класса Starfield
-from space_object import SpaceObject # Added import
+from alien_invasion.settings import Settings
+from alien_invasion.game_stats import GameStats
+from alien_invasion.scoreboard import Scoreboard
+from alien_invasion.button import Button
+from alien_invasion.ship import Ship
+from alien_invasion.bullet import Bullet
+from alien_invasion.alien import Alien
+from alien_invasion.powerup import PowerUp
+from alien_invasion.starfield import Starfield # Импорт класса Starfield
+from alien_invasion.space_object import SpaceObject # Added import
 import random
-import math # Импортируем math для floor, ceil, или других функций, если понадобятся. lerp определим сами.
-
-# Функция линейной интерполяции (Lerp)
-def lerp(start, end, t):
-    """Вычисляет линейную интерполяцию между start и end для данного t."""
-    return start + t * (end - start)
+import math # Импортируем math для floor, ceil, или других функций, если понадобятся.
 
 class AlienInvasion:
     """Класс для управления ресурсами и поведением игры"""
@@ -60,8 +55,8 @@ class AlienInvasion:
         self.aliens = pygame.sprite.Group()
 
         # Кнопки меню
-        self.new_game_button = Button(self, self.settings.menu_new_game_button_text)
-        self.exit_button = Button(self, self.settings.menu_exit_button_text)
+        self.new_game_button = Button(self, self.settings.text_new_game_button)
+        self.exit_button = Button(self, self.settings.text_exit_button)
 
         # Позиционирование кнопок меню
         # Position "New Game" button centered on the screen
@@ -72,9 +67,9 @@ class AlienInvasion:
         self.exit_button.rect.top = self.new_game_button.rect.bottom + 20
 
         # Pause Menu Buttons
-        self.resume_button = Button(self, "Продолжить")
-        self.restart_button_paused = Button(self, "Заново")
-        self.main_menu_button = Button(self, "Главное меню")
+        self.resume_button = Button(self, self.settings.text_resume_button)
+        self.restart_button_paused = Button(self, self.settings.text_restart_button)
+        self.main_menu_button = Button(self, self.settings.text_main_menu_button)
 
         # Position Resume button (e.g., centered)
         self.resume_button.rect.centerx = self.screen.get_rect().centerx
@@ -626,11 +621,11 @@ class AlienInvasion:
             self.new_game_button.draw_button()
             self.exit_button.draw_button()
         elif self.game_state == self.STATE_PAUSED:
-            pause_text = "Пауза"
             # Используем шрифт и цвет из scoreboard для консистентности, или можно задать свои в settings
-            pause_image = self.sb.font.render(pause_text, True,
-                                              self.settings.scoreboard_text_color,
-                                              None) # None для прозрачного фона текста
+            temp_pause_image = self.sb.font.render(self.settings.text_pause_message, True,
+                                                   self.settings.scoreboard_text_color,
+                                                   None) # None для прозрачного фона текста
+            pause_image = temp_pause_image.convert_alpha()
             screen_rect = self.screen.get_rect()
             # Position "Пауза" text above the buttons
             text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - 20 # 20px above resume button
@@ -703,3 +698,21 @@ if __name__ == '__main__':
     # Создание экземпляра и запуск игры
     ai = AlienInvasion()
     ai.run_game()
+
+# import cProfile
+# import pstats
+# # ... (существующий код main() остается выше)
+#
+# if __name__ == '__main__':
+#     # --- Код для профилирования ---
+#     # profiler = cProfile.Profile()
+#     # profiler.enable()
+#
+#     ai = AlienInvasion()
+#     ai.run_game()
+#
+#     # profiler.disable()
+#     # stats = pstats.Stats(profiler).sort_stats('cumulative') # cumulative, time, calls
+#     # stats.print_stats(30) # Показать первые 30 строк
+#     # # stats.dump_stats('profile_results.prof') # Для сохранения в файл и просмотра в SnakeViz
+#     # --- Конец кода для профилирования ---

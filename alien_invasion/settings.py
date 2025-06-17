@@ -100,8 +100,18 @@ class Settings():
 
         # Menu settings
         # Настройки меню
-        self.menu_new_game_button_text = "Новая игра"
-        self.menu_exit_button_text = "Выход"
+        # self.menu_new_game_button_text = "Новая игра" # Replaced by general localizable strings
+        # self.menu_exit_button_text = "Выход" # Replaced by general localizable strings
+
+        # Localized UI Strings
+        self.text_new_game_button = "Новая игра"
+        self.text_exit_button = "Выход"
+        self.text_resume_button = "Продолжить"
+        self.text_restart_button = "Заново"
+        self.text_main_menu_button = "Главное меню"
+        self.text_pause_message = "Пауза"
+        # self.text_game_over_message = "Игра Окончена" # Not currently used, can be added if a specific screen is implemented
+        self.text_high_score_label = "Рекорд: " # For Scoreboard
 
         # Настройки бонусов
         # self.powerup_general_spawn_chance = 0.1 # Удалено: Теперь рассчитывается для каждого уровня

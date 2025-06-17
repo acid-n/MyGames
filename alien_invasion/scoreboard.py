@@ -2,7 +2,7 @@ import pygame.font
 import os # Added import
 import pygame # Added import
 from pygame.sprite import Group
-from ship import Ship
+from alien_invasion.ship import Ship
 
 class Scoreboard():
     """Класс для вывода игровой информации"""
@@ -107,7 +107,11 @@ class Scoreboard():
         padding_x = self.settings.score_padding_right
         padding_y = self.settings.score_padding_top
 
-        self.score_image = self.font.render(score_str, True, self.text_color, text_bg_color)
+        temp_score_image = self.font.render(score_str, True, self.text_color, text_bg_color)
+        if text_bg_color is None:
+            self.score_image = temp_score_image.convert_alpha()
+        else:
+            self.score_image = temp_score_image.convert()
 
         # Вывод счета в правой верхней части экрана
         self.score_rect = self.score_image.get_rect()
@@ -117,14 +121,15 @@ class Scoreboard():
     def prep_high_score(self):
         """Преобразует рекордный счет в графическое изображение"""
         high_score = round(self.stats.high_score, -1)
-        high_score_str = "{:,}".format(high_score)
+        high_score_str = f"{self.settings.text_high_score_label}{high_score:,}"
 
         # Русский комментарий: Фон текста рекорда делаем прозрачным, если рамка будет общая (пока не используется для рекорда).
         # Если рамка отдельная для рекорда или ее нет, используем цвет фона игры.
         # В текущей реализации рамка делается только для score и level, так что рекорд имеет свой фон.
         text_bg_color_high = self.settings.bg_color # Оставляем фон для рекорда, т.к. рамка его не покрывает
 
-        self.high_score_image = self.font.render(high_score_str, True, self.text_color, text_bg_color_high)
+        temp_high_score_image = self.font.render(high_score_str, True, self.text_color, text_bg_color_high)
+        self.high_score_image = temp_high_score_image.convert()
 
         # Рекорд выравнивается по центру верхней стороны
         self.high_score_rect = self.high_score_image.get_rect()
@@ -134,7 +139,8 @@ class Scoreboard():
     def prep_level(self):
         """Преобразует уровень в графическое изображение"""
         level_str = str(self.stats.level)
-        self.level_image = self.font.render(level_str, True, self.text_color, self.settings.bg_color)
+        temp_level_image = self.font.render(level_str, True, self.text_color, self.settings.bg_color)
+        self.level_image = temp_level_image.convert()
 
         # Уровень выводится под текущим счетом
         self.level_rect = self.level_image.get_rect()
@@ -155,8 +161,10 @@ class Scoreboard():
             # Текстовое представление количества жизней (например, "x3")
             ships_str = f"x{self.stats.ships_left}"
             # Используем тот же шрифт и цвет, что и для счета
-            ships_text_img = self.font.render(ships_str, True,
-                                              self.text_color, self.settings.bg_color) # bg_color может быть None для прозрачности
+            # bg_color может быть None для прозрачности, но здесь всегда self.settings.bg_color
+            temp_ships_text_img = self.font.render(ships_str, True,
+                                                   self.text_color, self.settings.bg_color)
+            ships_text_img = temp_ships_text_img.convert()
             ships_text_rect = ships_text_img.get_rect()
             # Позиционируем текст справа от иконки сердца
             ships_text_rect.left = heart_rect.right + 5 # Небольшой отступ
