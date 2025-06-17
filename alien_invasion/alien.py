@@ -48,20 +48,21 @@ class Alien(Sprite):
             self.image_path = specific_image_path
         elif self.settings.alien_sprite_paths: # Если есть список путей и specific_image_path не задан
             self.image_path = random.choice(self.settings.alien_sprite_paths)
-        else: # Fallback на случай, если список пуст (хотя в settings должен быть fallback)
-            print("Ошибка: Не удалось выбрать спрайт для пришельца. Используется стандартный fallback.")
-            # Attempt to use the _IMAGES_DIR if available, otherwise a relative path.
-            # This assumes _IMAGES_DIR is defined in settings if the fallback is from there.
-            # For simplicity, using a path that might work if old structure was present.
-            # A more robust fallback would be a default colored surface if all paths fail.
-            self.image_path = os.path.join(self.settings._IMAGES_DIR_FALLBACK_IF_NEEDED if hasattr(self.settings, '_IMAGES_DIR_FALLBACK_IF_NEEDED') else 'alien_invasion/images', 'alien.bmp')
-            # Русский комментарий: ВНИМАНИЕ - используется устаревший alien.bmp.
-            # Рекомендуется заменить этот fallback на использование одного из PNG спрайтов пришельцев
-            # или на стандартную цветную заглушку, а директорию alien_invasion/images/ удалить,
-            # если _IMAGES_DIR_FALLBACK_IF_NEEDED и alien_invasion/images больше не нужны.
+        else:
+            # Этот блок теперь должен быть недостижим, если self.settings.alien_sprite_paths
+            # всегда содержит хотя бы один путь (например, fallback 'alien_ship_01.png'),
+            # как это обеспечивается в обновленном settings.py.
+            # Если он все же достигается, это указывает на проблему в settings.py.
+            print("CRITICAL ERROR: No alien sprites available in settings.alien_sprite_paths, even fallback is missing!")
+            # В качестве крайнего случая, чтобы игра не упала, устанавливаем image_path в None
+            # и полагаемся на try-except блок ниже, который создаст цветную поверхность.
+            self.image_path = None
 
         try:
-            self.image = pygame.image.load(self.image_path).convert_alpha()
+            if self.image_path: # Только если image_path не None
+                self.image = pygame.image.load(self.image_path).convert_alpha()
+            else: # Если image_path is None (из-за критической ошибки выше)
+                raise pygame.error("No image path provided for alien sprite.")
         except pygame.error as e:
             print(f"WARNING: Failed to load alien sprite: {self.image_path} - {e}. Using fallback.")
             self.image = pygame.Surface([40,40]) # Fallback: зеленый квадрат
