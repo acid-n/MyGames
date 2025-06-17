@@ -8,7 +8,9 @@ def lerp(start, end, t):
     return start + t * (end - start)
 
 _SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
-_IMAGES_DIR = os.path.join(_SETTINGS_DIR, 'images')
+# Русский комментарий: Базовая директория для всех ассетов игры.
+_ASSETS_DIR = os.path.join(_SETTINGS_DIR, "..", "assets")
+_IMAGES_DIR = os.path.join(_SETTINGS_DIR, 'images') # TODO: Этот путь выглядит устаревшим, проверить использование и возможно удалить в пользу _ASSETS_DIR/gfx
 
 class Settings():
     """Класс для хранения всех настроек игры Alien Invasion"""
@@ -124,6 +126,23 @@ class Settings():
 
         # Дополнительные ряды пришельцев для высоких уровней
         self.additional_alien_rows = 0 # Инициализация значения по умолчанию
+
+        # Русский комментарий: Пути к звуковым эффектам
+        self.sound_laser_path = os.path.join(self._ASSETS_DIR, "audio", "sfx", "laser", "laser01.ogg")
+        self.sound_powerup_path = os.path.join(self._ASSETS_DIR, "audio", "sfx", "powerup", "powerup01.ogg")
+        self.sound_shield_recharge_path = os.path.join(self._ASSETS_DIR, "audio", "sfx", "shield", "shield_recharge.ogg")
+        # Русский комментарий: Паттерн для звуков взрыва, используйте .format(i) для подстановки номера
+        self.sound_explosion_pattern = os.path.join(self._ASSETS_DIR, "audio", "sfx", "explosion", "explosion0{}.ogg")
+
+        # Русский комментарий: Пути к UI ассетам
+        self.ui_heart_icon_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "icons", "heart.png")
+        self.ui_score_frame_bg_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "frames", "blue_panel.png")
+
+        # Русский комментарий: Ссылка на директорию ассетов для удобства доступа из других модулей (например, alien_invasion.py для иконки паузы)
+        # Это не новый путь к ресурсу, а удобная ссылка на уже определенную _ASSETS_DIR.
+        # Используем self._ASSETS_DIR, чтобы избежать конфликта имен с глобальной _ASSETS_DIR, если такой будет.
+        # Имя self._ASSETS_DIR выбрано для указания, что это "внутренний" путь настроек.
+        self._ASSETS_DIR = _ASSETS_DIR # Присваиваем глобально определенный путь переменной экземпляра
 
         self.initialize_dynamic_settings(self.current_level_number)
 

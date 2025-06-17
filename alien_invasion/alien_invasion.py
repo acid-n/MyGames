@@ -133,36 +133,37 @@ class AlienInvasion:
 
         if self.sound_system_initialized and self.settings.audio_enabled:
             try:
-                # Русский комментарий: Путь к файлу звука лазера
-                sfx_laser_path = "assets/audio/sfx/laser/laser01.ogg"
+                # Русский комментарий: Путь к файлу звука лазера из настроек
+                sfx_laser_path = self.settings.sound_laser_path
                 if os.path.exists(sfx_laser_path):
                     self.sound_laser = pygame.mixer.Sound(sfx_laser_path)
                 else:
                     print(f"WARNING: Asset loading failed: Sound file not found: {sfx_laser_path}")
 
-                # Русский комментарий: Путь к файлу звука подбора бонуса
-                sfx_powerup_path = "assets/audio/sfx/powerup/powerup01.ogg"
+                # Русский комментарий: Путь к файлу звука подбора бонуса из настроек
+                sfx_powerup_path = self.settings.sound_powerup_path
                 if os.path.exists(sfx_powerup_path):
                     self.sound_powerup = pygame.mixer.Sound(sfx_powerup_path)
                 else:
                     print(f"WARNING: Asset loading failed: Sound file not found: {sfx_powerup_path}")
 
-                # Русский комментарий: Путь к файлу звука перезарядки щита
-                sfx_shield_path = "assets/audio/sfx/shield/shield_recharge.ogg"
+                # Русский комментарий: Путь к файлу звука перезарядки щита из настроек
+                sfx_shield_path = self.settings.sound_shield_recharge_path
                 if os.path.exists(sfx_shield_path):
                     self.sound_shield_recharge = pygame.mixer.Sound(sfx_shield_path)
                 else:
                     print(f"WARNING: Asset loading failed: Sound file not found: {sfx_shield_path}")
 
-                # Русский комментарий: Загрузка нескольких звуков взрыва
+                # Русский комментарий: Загрузка нескольких звуков взрыва с использованием паттерна из настроек
                 for i in range(1, 4): # Предполагаем имена explosion01.ogg, explosion02.ogg, explosion03.ogg
-                    sound_path = f"assets/audio/sfx/explosion/explosion0{i}.ogg"
+                    # Русский комментарий: Формируем путь к звуку взрыва, используя паттерн из настроек
+                    sound_path = self.settings.sound_explosion_pattern.format(i)
                     if os.path.exists(sound_path):
                         self.sounds_explosion.append(pygame.mixer.Sound(sound_path))
                     else:
                         print(f"WARNING: Asset loading failed: Sound file not found: {sound_path}")
                 if not self.sounds_explosion:
-                    print("WARNING: Asset loading failed: No explosion sounds loaded (files not found or less than 3).")
+                    print("WARNING: Asset loading failed: No explosion sounds loaded (files not found or pattern incorrect).")
 
             except pygame.error as e:
                 print(f"WARNING: Asset loading failed: Error initializing/loading sound effects: {e}")
@@ -186,7 +187,9 @@ class AlienInvasion:
         icon_size_ui = (32, 32)
 
         try:
-            pause_icon_path = "assets/gfx/ui/icons/pause.png" # Иконка для экрана паузы
+            # Русский комментарий: Путь к иконке паузы, построенный с использованием _ASSETS_DIR из настроек.
+            # Хотя иконка специфична для alien_invasion, использование _ASSETS_DIR обеспечивает консистентность путей.
+            pause_icon_path = os.path.join(self.settings._ASSETS_DIR, "gfx", "ui", "icons", "pause.png")
             if os.path.exists(pause_icon_path):
                 self.pause_icon = pygame.image.load(pause_icon_path).convert_alpha()
                 self.pause_icon = pygame.transform.scale(self.pause_icon, icon_size_ui)

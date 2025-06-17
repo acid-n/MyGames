@@ -27,8 +27,8 @@ class Scoreboard():
         icon_size = (32, 32) # Требуемый размер иконок
 
         try:
-            # Иконка для жизней (сердце)
-            heart_icon_path = "assets/gfx/ui/icons/heart.png" # Убедитесь, что имя файла корректно
+            # Русский комментарий: Иконка для жизней (сердце) из настроек
+            heart_icon_path = self.settings.ui_heart_icon_path
             if os.path.exists(heart_icon_path):
                 self.heart_icon = pygame.image.load(heart_icon_path).convert_alpha()
                 self.heart_icon = pygame.transform.scale(self.heart_icon, icon_size)
@@ -38,61 +38,74 @@ class Scoreboard():
         except pygame.error as e:
             print(f"WARNING: UI asset not found: Error loading UI icons for Scoreboard: {e}. Feature may be disabled or use fallback.")
 
-        # Загрузка элементов Sci-Fi рамки для счета
-        self.score_frame_elements = {}
-        self.score_frame_active = False # Флаг, показывающий, удалось ли загрузить рамку
+        # Русский комментарий: Загрузка и однократное масштабирование фона рамки для счета
+        self.original_score_frame_bg = None
+        self.scaled_score_frame_bg = None
+        self.score_frame_rect = None
+        self.frame_loaded_successfully = False
         try:
-            # Русский комментарий: Загружаем углы. Предполагаем, что все углы одного размера.
-            # Реальные имена файлов из Kenney UI Pack Sci-Fi могут отличаться.
-            # Например, 'buttonSquare_blue_pressed.png' может быть использован как фон,
-            # а элементы типа 'borderSmall_TL.png' как углы/грани.
-            # Здесь мы используем плейсхолдеры из FRAME_ELEMENTS_PATHS.
-
-            # Пример загрузки одного элемента для демонстрации
-            frame_bg_path = "assets/gfx/ui/frames/blue_panel.png" # Замените на реальный файл из пака
+            frame_bg_path = self.settings.ui_score_frame_bg_path
             if os.path.exists(frame_bg_path):
-                self.score_frame_elements['background'] = pygame.image.load(frame_bg_path).convert_alpha()
-                # Предполагаем, что рамка будет вокруг текущего счета и рекорда.
-                # Размеры рамки нужно будет адаптировать.
-                self.score_frame_active = True # Помечаем, что хотя бы фон загружен
+                self.original_score_frame_bg = pygame.image.load(frame_bg_path).convert_alpha()
+                self.frame_loaded_successfully = True
                 print(f"INFO: UI asset loaded: Score frame background '{frame_bg_path}'.")
             else:
                 print(f"WARNING: UI asset not found: Score frame background '{frame_bg_path}'. Frame will be inactive.")
-                self.score_frame_active = False
-
-            # Дополнительно можно загрузить углы и грани, если используется 9-patch подход
-            # self.score_frame_elements['top_left'] = pygame.image.load(FRAME_ELEMENTS_PATHS['top_left']).convert_alpha()
-            # ... и так далее для других элементов.
-            # Пока ограничимся фоном для простоты.
-
+                # self.frame_loaded_successfully остается False
         except pygame.error as e:
-            print(f"WARNING: UI asset not found: Error loading score frame elements: {e}. Frame will be inactive.")
-            self.score_frame_active = False
+            print(f"WARNING: UI asset not found: Error loading score frame background: {e}. Frame will be inactive.")
+            # self.frame_loaded_successfully остается False
 
-        # Подготовка изображений счетов
+        # Подготовка изображений счетов. Эти методы создадут score_rect, high_score_rect и т.д.
         self.prep_score()
         self.prep_high_score()
         self.prep_level()
         self.prep_ships()
+
+        # Русский комментарий: Теперь, когда текстовые rects доступны, масштабируем фон рамки, если он был загружен
+        if self.frame_loaded_successfully and self.original_score_frame_bg:
+            # Русский комментарий: Отступы внутри рамки до текста. Можно вынести в settings.
+            frame_padding = 15 # px
+
+            # Русский комментарий: Определяем область, которую должна покрыть рамка.
+            # Начнем с self.score_rect.
+            if hasattr(self, 'score_rect'):
+                combined_rect_for_frame = self.score_rect.copy()
+
+                # Русский комментарий: Объединяем с self.high_score_rect, если он существует и должен быть внутри той же рамки.
+                # Это предполагает, что high_score находится рядом или над score.
+                # Если high_score рисуется в другом месте (например, строго по центру экрана),
+                # то его не нужно включать в combined_rect_for_frame для рамки счета.
+                # В текущей логике prep_high_score размещает его по центру вверху, а score справа вверху.
+                # Для общей рамки их нужно будет перепозиционировать или использовать отдельные рамки.
+                # Пока сделаем рамку только для score_rect и level_rect, так как они близко.
+                if hasattr(self, 'level_rect'):
+                    combined_rect_for_frame.union_ip(self.level_rect)
+                # if hasattr(self, 'high_score_rect'):
+                # combined_rect_for_frame.union_ip(self.high_score_rect) # Раскомментировать, если нужно включить и рекорд
+
+                target_frame_width = combined_rect_for_frame.width + 2 * frame_padding
+                target_frame_height = combined_rect_for_frame.height + 2 * frame_padding
+
+                self.scaled_score_frame_bg = pygame.transform.scale(self.original_score_frame_bg, (target_frame_width, target_frame_height))
+                self.score_frame_rect = self.scaled_score_frame_bg.get_rect()
+                # Русский комментарий: Центрируем рамку относительно объединенного текстового блока.
+                self.score_frame_rect.center = combined_rect_for_frame.center
+            else:
+                # Русский комментарий: score_rect еще не готов, это неожиданно. Отключаем рамку.
+                self.frame_loaded_successfully = False
+                print(f"WARNING: Scoreboard frame disabled because score_rect was not available after prep_score().")
+
 
     def prep_score(self):
         """Преобразует текущий счет в графическое изображение"""
         rounded_score = round(self.stats.score, -1)
         score_str = "{:,}".format(rounded_score)
 
-        # Русский комментарий: Если рамка активна, делаем фон текста прозрачным и добавляем отступы
-        text_bg_color = self.settings.bg_color
+        # Русский комментарий: Фон текста делаем прозрачным, если рамка будет использоваться, иначе используем цвет фона игры.
+        text_bg_color = None if self.frame_loaded_successfully else self.settings.bg_color
         padding_x = self.settings.score_padding_right
         padding_y = self.settings.score_padding_top
-
-        if self.score_frame_active and 'background' in self.score_frame_elements:
-            text_bg_color = None # Прозрачный фон для текста
-            # Предположим, что рамка дает нам некоторый внутренний отступ.
-            # Эти значения нужно будет настроить в зависимости от вида рамки.
-            # Например, если у рамки есть своя граница в 10px.
-            # padding_x += 10
-            # padding_y += 10
-            # Для простоты пока оставим стандартные отступы, но фон сделаем прозрачным.
 
         self.score_image = self.font.render(score_str, True, self.text_color, text_bg_color)
 
@@ -106,9 +119,10 @@ class Scoreboard():
         high_score = round(self.stats.high_score, -1)
         high_score_str = "{:,}".format(high_score)
 
-        text_bg_color_high = self.settings.bg_color
-        if self.score_frame_active and 'background' in self.score_frame_elements:
-            text_bg_color_high = None # Прозрачный фон для текста
+        # Русский комментарий: Фон текста рекорда делаем прозрачным, если рамка будет общая (пока не используется для рекорда).
+        # Если рамка отдельная для рекорда или ее нет, используем цвет фона игры.
+        # В текущей реализации рамка делается только для score и level, так что рекорд имеет свой фон.
+        text_bg_color_high = self.settings.bg_color # Оставляем фон для рекорда, т.к. рамка его не покрывает
 
         self.high_score_image = self.font.render(high_score_str, True, self.text_color, text_bg_color_high)
 
@@ -173,42 +187,10 @@ class Scoreboard():
 
     def show_score(self):
         """Выводит текущий счет, рекорд и число оставшихся кораблей"""
-        # Русский комментарий: Отрисовка рамки счета, если она активна
-        if self.score_frame_active and 'background' in self.score_frame_elements:
-            # Рамка должна рисоваться ПОД текстом счета и рекорда.
-            # Создадим Rect для рамки, который охватывает self.score_rect и self.high_score_rect
-            # Это очень упрощенный подход. В идеале, размеры рамки должны быть известны заранее.
-
-            # Определяем область, которую должна покрыть рамка
-            # Возьмем верхнюю точку от рекорда (или счета, если рекорд выше)
-            # и левую/правую границы от них же.
-            # Для простоты, предположим, что рамка рисуется только вокруг текущего счета.
-            if hasattr(self, 'score_rect'): # Ensure score_rect exists
-                frame_bg_rect = self.score_frame_elements['background'].get_rect()
-
-                # Центрируем фон рамки относительно текста счета, но делаем его больше
-                # Это потребует точной настройки размеров фона рамки или использования 9-patch
-                # Пример: делаем фон немного больше текста счета
-                frame_padding = 10 # px
-
-                # Tentative combined rect for score and high_score to be covered by frame
-                # This part can be complex depending on desired frame behavior
-                # For now, let's assume the frame primarily covers the score_rect area,
-                # and high_score might be drawn over it or have its own frame.
-                # The provided script focuses on score_rect for simplicity.
-                combined_rect_for_frame = self.score_rect.copy()
-                if hasattr(self, 'high_score_rect'):
-                     combined_rect_for_frame.union_ip(self.high_score_rect)
-                # Add padding around this combined area
-
-                frame_bg_rect.width = combined_rect_for_frame.width + 2 * frame_padding
-                frame_bg_rect.height = combined_rect_for_frame.height + 2 * frame_padding # Consider level display too if it's close
-                frame_bg_rect.center = combined_rect_for_frame.center
-
-                # Масштабируем изображение фона рамки под этот Rect
-                scaled_frame_bg = pygame.transform.scale(self.score_frame_elements['background'], (frame_bg_rect.width, frame_bg_rect.height))
-                self.screen.blit(scaled_frame_bg, frame_bg_rect)
-
+        # Русский комментарий: Отрисовка предварительно смасштабированной рамки счета, если она успешно загружена и подготовлена
+        if self.frame_loaded_successfully and self.scaled_score_frame_bg and self.score_frame_rect:
+            self.screen.blit(self.scaled_score_frame_bg, self.score_frame_rect)
+        # Русский комментарий: Текстовые элементы счета, рекорда и уровня рисуются поверх рамки (или без нее)
         self.screen.blit(self.score_image, self.score_rect)
         self.screen.blit(self.high_score_image, self.high_score_rect)
         self.screen.blit(self.level_image, self.level_rect)
