@@ -1,6 +1,9 @@
 import unittest
+from unittest import mock # Added import for mock
 import os
 import sys
+import pygame # Added import for pygame
+import alien_invasion.button # Added: For TestButtonCreation
 
 # Добавляем корневую директорию проекта в sys.path, чтобы можно было импортировать модули игры
 # Это необходимо, если тесты запускаются непосредственно из директории tests/
@@ -122,6 +125,9 @@ class MockPygameTransform:
 
 class MockPygameFont:
     """Мок для объекта шрифта pygame.font.Font или SysFont."""
+    def __init__(self, name, size, bold=False, italic=False): # Match SysFont signature better
+        pass
+
     def render(self, text, antialias, color, background=None):
         # Возвращаем мок Surface, имитирующий отрендеренный текст.
         # Размеры зависят от текста, для простоты используем фиксированные.
@@ -178,6 +184,19 @@ class MockAlienInvasion:
 
 # --- Тестовые классы ---
 
+# Новый тестовый класс для вспомогательных функций из settings.py
+class TestSettingsHelpers(unittest.TestCase):
+    def test_lerp_function(self):
+        # Импортируем lerp здесь, чтобы избежать проблем с областью видимости при мокинге
+        from alien_invasion.settings import lerp
+        self.assertEqual(lerp(0, 10, 0.5), 5)
+        self.assertEqual(lerp(10, 20, 0), 10)
+        self.assertEqual(lerp(10, 20, 1), 20)
+        self.assertAlmostEqual(lerp(0, 1, 0.33), 0.33)
+        # Тест на ограничение t
+        self.assertEqual(lerp(0, 10, -1.0), 0) # t < 0 should be clamped to 0
+        self.assertEqual(lerp(0, 10, 2.0), 10) # t > 1 should be clamped to 1
+
 class TestSettingsInitialization(unittest.TestCase):
     """Тесты для инициализации класса Settings."""
 
@@ -213,9 +232,12 @@ class TestSettingsInitialization(unittest.TestCase):
         #                  f"_ASSETS_DIR должен указывать на {expected_abs_assets_dir}")
         # Замечание: приведенный выше способ с sys.modules может быть сложен, если структура не стандартная.
         # Проще проверить окончание пути, как было задумано изначально, если мы знаем структуру.
-        self.assertTrue(normalized_assets_dir.endswith(os.path.normpath(expected_path_part)),
-                        f"_ASSETS_DIR ('{normalized_assets_dir}') должен оканчиваться на '{os.path.normpath(expected_path_part)}'.")
-
+        # self.assertTrue(normalized_assets_dir.endswith(os.path.normpath(expected_path_part)),
+        #                 f"_ASSETS_DIR ('{normalized_assets_dir}') должен оканчиваться на '{os.path.normpath(expected_path_part)}'.")
+        # Corrected assertion:
+        expected_abs_assets_dir = os.path.abspath(os.path.join(project_root, "assets"))
+        self.assertEqual(normalized_assets_dir, expected_abs_assets_dir,
+                         f"_ASSETS_DIR ('{normalized_assets_dir}') должен быть '{expected_abs_assets_dir}'.")
 
     def test_key_asset_paths(self):
         """Проверка нескольких ключевых путей к ассетам."""
@@ -234,20 +256,74 @@ class TestSettingsInitialization(unittest.TestCase):
         self.assertIsInstance(self.settings.ui_heart_icon_path, str, "ui_heart_icon_path должен быть строкой.")
         self.assertTrue(self.settings.ui_heart_icon_path.endswith('.png'), "ui_heart_icon_path должен оканчиваться на '.png'.")
 
+    def test_localized_strings_exist_and_correct(self):
+        """Проверка наличия и корректности локализованных строк."""
+        self.assertEqual(self.settings.text_new_game_button, "Новая игра")
+        self.assertEqual(self.settings.text_exit_button, "Выход")
+        self.assertEqual(self.settings.text_resume_button, "Продолжить")
+        self.assertEqual(self.settings.text_restart_button, "Заново")
+        self.assertEqual(self.settings.text_main_menu_button, "Главное меню")
+        self.assertEqual(self.settings.text_pause_message, "Пауза")
+        self.assertEqual(self.settings.text_high_score_label, "Рекорд: ")
 
-@unittest.mock.patch('pygame.image', MockPygameImage())
-@unittest.mock.patch('pygame.transform', MockPygameTransform())
-@unittest.mock.patch('pygame.display', MockPygameDisplay()) # Мокаем display для инициализации AlienInvasion
-@unittest.mock.patch('pygame.font.SysFont', lambda name, size: MockPygameFont()) # Мокаем SysFont
-@unittest.mock.patch('pygame.mixer.init', lambda *args, **kwargs: None) # Мокаем инициализацию микшера
-@unittest.mock.patch('pygame.mixer.Sound', lambda *args, **kwargs: None) # Мокаем загрузку звуков
-@unittest.mock.patch('pygame.image.get_extended', lambda: True) # Мокаем проверку расширений
-@unittest.mock.patch('pygame.init', lambda: None) # Мокаем pygame.init()
+# Cleaned up general mocks for TestButtonCreation, keeping only essential non-targeted ones
+@mock.patch('pygame.mixer.init', lambda *args, **kwargs: None) # General mock
+@mock.patch('pygame.mixer.Sound', lambda *args, **kwargs: None) # General mock
+@mock.patch('pygame.image.get_extended', lambda: True) # General mock
+@mock.patch('pygame.init', lambda: None) # General mock
+@mock.patch('pygame.font.init', lambda: None)
+@mock.patch('pygame.font.get_init', lambda: True)
+@mock.patch('pygame.font.SysFont', lambda name, size, bold=False, italic=False: MockPygameFont(name, size, bold, italic)) # Corrected SysFont mock
+class TestButtonCreation(unittest.TestCase):
+    """Тесты для класса Button, особенно в контексте локализации."""
+    def setUp(self):
+        self.settings = Settings()
+        self.mock_ai_game = MockAlienInvasion(self.settings)
+        # Button.__init__ вызывает _prep_msg, который использует self.font.render
+        # self.font мокается декоратором класса @unittest.mock.patch('pygame.font.SysFont', ...)
+
+    def test_button_uses_settings_text(self, mock_sysfont): # Added mock_sysfont
+        """Проверка, что кнопка использует текст из настроек."""
+        # Используем одну из локализованных строк
+        button_text_from_settings = self.settings.text_new_game_button
+        button = alien_invasion.button.Button(self.mock_ai_game, button_text_from_settings)
+
+        # MockPygameFont.render в нашем моке создает MockSurface, где width = len(text) * 10
+        # Проверяем, что msg_image имеет ожидаемую ширину на основе текста из настроек
+        expected_width = len(button_text_from_settings) * 10
+        self.assertEqual(button.msg_image.width, expected_width,
+                         f"Ширина изображения кнопки '{button.msg_image.width}' не соответствует ожидаемой "
+                         f"ширине '{expected_width}' для текста '{button_text_from_settings}'.")
+
+    def test_button_prep_msg_handles_string(self, mock_sysfont): # Added mock_sysfont
+        """Проверка, что _prep_msg корректно обрабатывает переданную строку."""
+        test_msg = "Test Message"
+        button = alien_invasion.button.Button(self.mock_ai_game, "Dummy") # Начальное сообщение
+
+        # Вызываем _prep_msg напрямую
+        button._prep_msg(test_msg)
+
+        expected_width = len(test_msg) * 10
+        self.assertEqual(button.msg_image.width, expected_width)
+        # Дополнительно можно проверить, что msg_image_rect обновился, но это уже детали реализации Button
+
+# Cleaned up general mocks for TestShipLoading
+@mock.patch('pygame.mixer.init', lambda *args, **kwargs: None) # General mock
+@mock.patch('pygame.mixer.Sound', lambda *args, **kwargs: None) # General mock
+@mock.patch('alien_invasion.ship.pygame.image', new_callable=MockPygameImage) # More targeted mock
+@mock.patch('alien_invasion.ship.pygame.transform', new_callable=MockPygameTransform) # More targeted mock
+@mock.patch('pygame.display.set_mode', lambda res, flags=0, depth=0, display=0, vsync=0: MockSurface(res))
+@mock.patch('pygame.image.get_extended', lambda: True)
+@mock.patch('pygame.init', lambda: None)
+@mock.patch('pygame.display.init', lambda: None)
+@mock.patch('pygame.display.get_init', lambda: True)
 class TestShipLoading(unittest.TestCase):
     """Тесты для загрузки и инициализации объекта Ship."""
 
-    def setUp(self):
+    def setUp(self): # Removed mock args
         """Настройка перед каждым тестом."""
+        pygame.init() # Call mocked pygame.init()
+        pygame.display.init() # Call mocked pygame.display.init()
         self.settings = Settings()
         # Для инициализации Ship нужен объект ai_game, который имеет screen и settings.
         # Создадим простой мок для ai_game или используем MockAlienInvasion.
@@ -257,7 +333,7 @@ class TestShipLoading(unittest.TestCase):
         self.ship = Ship(self.mock_ai_game)
         self.mock_ai_game.ship = self.ship # Присваиваем корабль моку игры
 
-    def test_ship_created_successfully(self):
+    def test_ship_created_successfully(self, mock_pygame_transform, mock_pygame_image): # Added mock args
         """Проверка, что объект Ship создается и его ключевые атрибуты инициализированы."""
         self.assertIsNotNone(self.ship, "Объект Ship не должен быть None.")
         self.assertIsNotNone(self.ship.image, "ship.image не должен быть None.")
@@ -266,7 +342,7 @@ class TestShipLoading(unittest.TestCase):
         self.assertIsNotNone(self.ship.rect, "ship.rect не должен быть None.")
         self.assertIsInstance(self.ship.rect, MockRect, "ship.rect должен быть экземпляром MockRect (pygame.Rect).")
 
-    def test_ship_initial_position(self):
+    def test_ship_initial_position(self, mock_pygame_transform, mock_pygame_image): # Added mock args
         """Проверка начальной позиции корабля."""
         # Корабль должен быть спозиционирован внизу по центру экрана.
         # screen_rect у мок-экрана нашего mock_ai_game.
@@ -274,15 +350,24 @@ class TestShipLoading(unittest.TestCase):
         self.assertEqual(self.ship.rect.centerx, mock_screen_rect.centerx, "Корабль должен быть по центру оси X.")
         self.assertEqual(self.ship.rect.midbottom[1], mock_screen_rect.midbottom[1], "Низ корабля должен совпадать с низом экрана.")
 
-
-@unittest.mock.patch('pygame.font.SysFont', lambda name, size: MockPygameFont())
-@unittest.mock.patch('pygame.image.load', MockPygameImage().load) # Используем метод load нашего мока
-@unittest.mock.patch('pygame.transform.scale', MockPygameTransform().scale)
+# Cleaned up general mocks for TestScoreboardUpdates
+@mock.patch('pygame.font.SysFont', lambda name, size, bold=False, italic=False: MockPygameFont(name, size, bold, italic)) # Corrected SysFont mock
+@mock.patch('alien_invasion.scoreboard.pygame.image.load', new_callable=lambda: MockPygameImage().load)
+@mock.patch('alien_invasion.scoreboard.pygame.transform.scale', new_callable=lambda: MockPygameTransform().scale)
+@mock.patch('pygame.font.init', lambda: None) # General font init
+@mock.patch('pygame.font.get_init', lambda: True) # General font get_init
+# Add general mixer, image.get_extended, pygame.init if they are not inherited from a base test class that might have them
+@mock.patch('pygame.mixer.init', lambda *args, **kwargs: None)
+@mock.patch('pygame.mixer.Sound', lambda *args, **kwargs: None)
+@mock.patch('pygame.image.get_extended', lambda: True)
+@mock.patch('pygame.init', lambda: None)
 class TestScoreboardUpdates(unittest.TestCase):
     """Тесты для обновления информации в Scoreboard."""
 
-    def setUp(self):
+    def setUp(self): # Removed mock args
         """Настройка перед каждым тестом."""
+        pygame.init() # Call mocked pygame.init()
+        pygame.font.init() # Call mocked pygame.font.init()
         self.settings = Settings()
         self.mock_screen = MockSurface((self.settings.screen_width, self.settings.screen_height))
 
@@ -295,7 +380,7 @@ class TestScoreboardUpdates(unittest.TestCase):
 
         self.scoreboard = Scoreboard(self.mock_ai_game)
 
-    def test_initial_scoreboard_images_created(self):
+    def test_initial_scoreboard_images_created(self, mock_transform_scale, mock_image_load, mock_sysfont): # Added mock args
         """Проверка, что начальные изображения для счета, уровня и кораблей созданы."""
         self.assertIsNotNone(self.scoreboard.score_image, "score_image должно быть создано.")
         self.assertIsInstance(self.scoreboard.score_image, MockSurface, "score_image должно быть MockSurface.")
@@ -317,9 +402,10 @@ class TestScoreboardUpdates(unittest.TestCase):
             # В текущей конфигурации setUp для Scoreboard, Ship не создается напрямую в Scoreboard,
             # а только если heart_icon не загружен. heart_icon у нас мокается.
 
-    def test_score_update_reflects_in_image(self):
+    def test_score_update_reflects_in_image(self, mock_transform_scale, mock_image_load, mock_sysfont): # Added mock args
         """Проверка, что изменение счета в GameStats и вызов prep_score обновляет score_image."""
-        initial_score_image_surface = self.scoreboard.score_image
+        # Сохраняем ссылку на текущий объект MockSurface перед обновлением
+        initial_score_image_surface_obj = self.scoreboard.score_image
 
         # Изменяем счет в статистике
         self.mock_ai_game.stats.score = 12345
@@ -338,10 +424,34 @@ class TestScoreboardUpdates(unittest.TestCase):
 
         # score_str для 0: "0" -> 1*10 = 10
         # rounded_score for 12345 is 12340. score_str = "{:,}".format(12340) -> "12,340" (6 символов) -> 6*10=60
-        self.assertNotEqual(initial_score_image_surface.width, updated_score_image_surface.width,
+        self.assertNotEqual(initial_score_image_surface_obj.width, updated_score_image_surface.width,
                            "Ширина изображения счета должна измениться после обновления счета, "
-                           f"старая ширина: {initial_score_image_surface.width}, "
+                           f"старая ширина: {initial_score_image_surface_obj.width}, "
                            f"новая ширина: {updated_score_image_surface.width}")
+        # Также можно проверить, что это разные объекты, если convert/convert_alpha создает новый объект MockSurface
+        self.assertNotEqual(id(initial_score_image_surface_obj), id(updated_score_image_surface),
+                            "Объект score_image должен быть новым после prep_score, если текст изменился.")
+
+
+    def test_high_score_label_from_settings(self, mock_transform_scale, mock_image_load, mock_sysfont): # Added mock args
+        """Проверка, что метка рекорда используется из Settings."""
+        # Устанавливаем произвольный рекорд
+        self.mock_ai_game.stats.high_score = 54321
+        self.scoreboard.prep_high_score() # Готовим изображение рекорда
+
+        # MockPygameFont().render в нашем моке создает MockSurface с шириной len(text) * 10.
+        # Ожидаемый текст: "Рекорд: 54,320" (округление до -1 для 54321 -> 54320)
+        # Длина "Рекорд: " = 8 символов. Длина "54,320" = 6 символов. Итого 14 символов.
+        expected_label = self.settings.text_high_score_label # "Рекорд: "
+        rounded_high_score_val = round(self.mock_ai_game.stats.high_score, -1)
+        expected_score_str_part = "{:,}".format(rounded_high_score_val) # "54,320"
+        expected_full_text = expected_label + expected_score_str_part
+
+        expected_width = len(expected_full_text) * 10
+        self.assertEqual(self.scoreboard.high_score_image.width, expected_width,
+                         f"Ширина high_score_image ({self.scoreboard.high_score_image.width}) "
+                         f"не соответствует ожидаемой ({expected_width}) для текста '{expected_full_text}'.")
+
 
     def tearDown(self):
         """Очистка после тестов, если необходимо (например, удалить тестовые файлы)."""
@@ -350,6 +460,8 @@ class TestScoreboardUpdates(unittest.TestCase):
         pass
 
 if __name__ == '__main__':
+    # Импортируем Button здесь, чтобы избежать циклического импорта на уровне модуля,
+    # если Button сам импортирует что-то, что может быть замокано глобально.
+    # Это больше предосторожность для сложных структур.
+    import alien_invasion.button
     unittest.main(verbosity=2)
-
-```
