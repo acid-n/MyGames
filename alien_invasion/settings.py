@@ -10,13 +10,20 @@ def lerp(start, end, t):
 _SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
 # Русский комментарий: Базовая директория для всех ассетов игры.
 _ASSETS_DIR = os.path.join(_SETTINGS_DIR, "..", "assets")
-_IMAGES_DIR = os.path.join(_SETTINGS_DIR, 'images') # TODO: Этот путь выглядит устаревшим, проверить использование и возможно удалить в пользу _ASSETS_DIR/gfx
+# _IMAGES_DIR удален, так как он устарел и больше не будет использоваться.
+# TODO: Комментарий про _IMAGES_DIR был здесь, теперь удален.
 
 class Settings():
     """Класс для хранения всех настроек игры Alien Invasion"""
 
     def __init__(self):
         """Инициализирует статические настройки игры"""
+        # Русский комментарий: Ссылка на директорию ассетов для удобства доступа из других модулей (например, alien_invasion.py для иконки паузы)
+        # Это не новый путь к ресурсу, а удобная ссылка на уже определенную _ASSETS_DIR.
+        # Используем self._ASSETS_DIR, чтобы избежать конфликта имен с глобальной _ASSETS_DIR, если такой будет.
+        # Имя self._ASSETS_DIR выбрано для указания, что это "внутренний" путь настроек.
+        self._ASSETS_DIR = _ASSETS_DIR # Присваиваем глобально определенный путь переменной экземпляра
+
         # Фактор максимального увеличения скорости пришельцев сверх линейной прогрессии
         # Используется для уровней 6 и выше
         self.max_speed_factor = 2.0 # Максимальный множитель скорости
@@ -63,9 +70,9 @@ class Settings():
         self.alien_vertical_spacing_factor = 2.0
 
         # Resource paths
-        self.ship_image_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'ships', 'player', 'playerShip3_blue.png') # Путь относительно settings.py
+        self.ship_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'ships', 'player', 'playerShip3_blue.png') # Используем self._ASSETS_DIR
         # self.alien_image_path - теперь список alien_sprite_paths
-        # self.alien_image_path = os.path.join(_IMAGES_DIR, 'alien.bmp')
+        # self.alien_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'fallback', 'alien.bmp') # Пример, если бы alien.bmp был бы здесь
 
         # High score storage
         self.highscore_filepath = os.path.join(_SETTINGS_DIR, "highscore.json")
@@ -137,12 +144,10 @@ class Settings():
         # Русский комментарий: Пути к UI ассетам
         self.ui_heart_icon_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "icons", "heart.png")
         self.ui_score_frame_bg_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "frames", "blue_panel.png")
+        self.ui_pause_icon_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "icons", "pause.png") # Добавлено для иконки паузы
 
-        # Русский комментарий: Ссылка на директорию ассетов для удобства доступа из других модулей (например, alien_invasion.py для иконки паузы)
-        # Это не новый путь к ресурсу, а удобная ссылка на уже определенную _ASSETS_DIR.
-        # Используем self._ASSETS_DIR, чтобы избежать конфликта имен с глобальной _ASSETS_DIR, если такой будет.
-        # Имя self._ASSETS_DIR выбрано для указания, что это "внутренний" путь настроек.
-        self._ASSETS_DIR = _ASSETS_DIR # Присваиваем глобально определенный путь переменной экземпляра
+        # Русский комментарий: Путь к фоновой музыке
+        self.music_background_path = os.path.join(self._ASSETS_DIR, "audio", "music", "outer_space_loop.ogg") # Добавлено для фоновой музыки
 
         self.initialize_dynamic_settings(self.current_level_number)
 
@@ -422,7 +427,7 @@ class Settings():
 
         # Русский комментарий: Пути к спрайтам пришельцев
         self.alien_sprite_paths = []
-        base_alien_gfx_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'ships', 'aliens')
+        base_alien_gfx_path = os.path.join(self._ASSETS_DIR, 'gfx', 'ships', 'aliens') # Используем self._ASSETS_DIR
         for i in range(1, 25): # Загружаем все 24 спрайта alien_ship_01.png ... alien_ship_24.png
             path = os.path.join(base_alien_gfx_path, f"alien_ship_{i:02d}.png") # Например, alien_ship_01.png
             if os.path.exists(path):
@@ -431,16 +436,23 @@ class Settings():
                 print(f"WARNING: Asset not found: Alien sprite not found - {path}")
 
         if not self.alien_sprite_paths:
-            print("CRITICAL ERROR: No alien sprites loaded. Using fallback 'alien.bmp'.")
-            # Fallback на старый спрайт, если новые не найдены
-            # _IMAGES_DIR is defined globally, so we can use it directly.
-            self.alien_sprite_paths.append(os.path.join(_IMAGES_DIR, 'alien.bmp'))
+            print("CRITICAL ERROR: No alien sprites loaded. Using fallback 'alien_ship_01.png'.")
+            # Fallback на один из стандартных PNG спрайтов пришельцев.
+            # Это гарантирует, что всегда будет хотя бы один спрайт, и он будет в новом формате.
+            fallback_alien_path = os.path.join(self._ASSETS_DIR, 'gfx', 'ships', 'aliens', 'alien_ship_01.png')
+            if os.path.exists(fallback_alien_path):
+                self.alien_sprite_paths.append(fallback_alien_path)
+            else:
+                # Этот else маловероятен, если структура ассетов корректна, но для полноты:
+                print(f"CRITICAL ERROR: Fallback alien sprite '{fallback_alien_path}' also not found.")
+                # В качестве самого крайнего случая можно было бы добавить сюда создание Surface,
+                # но это усложнит Settings, лучше убедиться в наличии ассетов.
 
         self.current_alien_image_path = None # Будет устанавливаться в Alien.__init__
 
         # Русский комментарий: Пути к спрайтам планет и галактик
         self.planet_sprite_paths = []
-        base_planet_gfx_path = os.path.join(_SETTINGS_DIR, '..', 'assets', 'gfx', 'planets')
+        base_planet_gfx_path = os.path.join(self._ASSETS_DIR, 'gfx', 'planets') # Используем self._ASSETS_DIR
         # Предположим, что файлы называются planet01.png, planet02.png, galaxy01.png и т.д.
         # Пользователю нужно будет обеспечить наличие этих файлов.
         # Пример нескольких файлов:

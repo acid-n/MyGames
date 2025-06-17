@@ -170,7 +170,7 @@ class AlienInvasion:
 
             # Русский комментарий: Загрузка и воспроизведение фоновой музыки (закомментировано)
             # try:
-            #     music_path = "assets/audio/music/outer_space_loop.ogg"
+            #     music_path = self.settings.music_background_path # Используем путь из настроек
             #     if os.path.exists(music_path):
             #         pygame.mixer.music.load(music_path)
             #         pygame.mixer.music.set_volume(self.settings.music_volume) # Keep dynamic volume if set from settings
@@ -187,9 +187,8 @@ class AlienInvasion:
         icon_size_ui = (32, 32)
 
         try:
-            # Русский комментарий: Путь к иконке паузы, построенный с использованием _ASSETS_DIR из настроек.
-            # Хотя иконка специфична для alien_invasion, использование _ASSETS_DIR обеспечивает консистентность путей.
-            pause_icon_path = os.path.join(self.settings._ASSETS_DIR, "gfx", "ui", "icons", "pause.png")
+            # Русский комментарий: Путь к иконке паузы из настроек.
+            pause_icon_path = self.settings.ui_pause_icon_path # Используем путь из настроек
             if os.path.exists(pause_icon_path):
                 self.pause_icon = pygame.image.load(pause_icon_path).convert_alpha()
                 self.pause_icon = pygame.transform.scale(self.pause_icon, icon_size_ui)
