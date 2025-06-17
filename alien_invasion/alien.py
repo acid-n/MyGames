@@ -55,7 +55,10 @@ class Alien(Sprite):
             # For simplicity, using a path that might work if old structure was present.
             # A more robust fallback would be a default colored surface if all paths fail.
             self.image_path = os.path.join(self.settings._IMAGES_DIR_FALLBACK_IF_NEEDED if hasattr(self.settings, '_IMAGES_DIR_FALLBACK_IF_NEEDED') else 'alien_invasion/images', 'alien.bmp')
-
+            # Русский комментарий: ВНИМАНИЕ - используется устаревший alien.bmp.
+            # Рекомендуется заменить этот fallback на использование одного из PNG спрайтов пришельцев
+            # или на стандартную цветную заглушку, а директорию alien_invasion/images/ удалить,
+            # если _IMAGES_DIR_FALLBACK_IF_NEEDED и alien_invasion/images больше не нужны.
 
         try:
             self.image = pygame.image.load(self.image_path).convert_alpha()
