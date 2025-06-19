@@ -1,6 +1,17 @@
 import pygame
 from pygame.sprite import Sprite
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Constants for ship fallback visuals and effects
+_FALLBACK_SHIP_SIZE = (64, 64)
+_FALLBACK_SHIP_COLOR = (0, 0, 255)  # Blue
+_SHIELD_OVERLAY_COLOR = (0, 100, 255, 90)  # Bright blue, ~35% transparent
+_SHIELD_OUTLINE_THICKNESS = 2
+_DOUBLE_FIRE_EFFECT_COLOR = (255, 165, 0) # Orange
+_DOUBLE_FIRE_MARKER_RADIUS = 3
 
 
 class Ship(Sprite):
@@ -18,14 +29,14 @@ class Ship(Sprite):
             self.original_image = pygame.image.load(
                 self.settings.ship_image_path).convert_alpha()
         except pygame.error as e:
-            print(
-                f"Не удалось загрузить спрайт корабля: {self.settings.ship_image_path} - {e}")
+            logger.warning("Не удалось загрузить спрайт корабля: %s - %s. Using fallback.",
+                           self.settings.ship_image_path, e)
             # Загружаем простой прямоугольник как fallback
-            self.original_image = pygame.Surface([64, 64])
-            self.original_image.fill((0, 0, 255))  # Синий прямоугольник
+            self.original_image = pygame.Surface(_FALLBACK_SHIP_SIZE)
+            self.original_image.fill(_FALLBACK_SHIP_COLOR)  # Синий прямоугольник
 
         self.original_image = pygame.transform.scale(
-            self.original_image, (64, 64))
+            self.original_image, (self.settings.ship_display_width, self.settings.ship_display_height))
 
         # Создаем варианты спрайта
         self.image_normal = self.original_image
@@ -87,10 +98,10 @@ class Ship(Sprite):
         # Простой эффект: рисуем синий полупрозрачный круг вокруг корабля или меняем цвет контура.
         # Для примера, наложим полупрозрачный синий цвет на все изображение.
         overlay = pygame.Surface(shielded_img.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 100, 255, 90))  # Ярко-синий, ~35% прозрачности.
+        overlay.fill(_SHIELD_OVERLAY_COLOR)
         shielded_img.blit(overlay, (0, 0))
         # Альтернативный вариант с контуром (закомментирован, так как выбран overlay.fill):
-        # pygame.draw.rect(shielded_img, self.settings.ship_shield_outline_color, shielded_img.get_rect(), 2)
+        # pygame.draw.rect(shielded_img, self.settings.ship_shield_outline_color, shielded_img.get_rect(), _SHIELD_OUTLINE_THICKNESS)
         return shielded_img
 
     def _create_double_fire_image(self, base_image):
@@ -101,8 +112,8 @@ class Ship(Sprite):
         double_fire_img = base_image.copy()
         # Пример закомментированного кода для добавления визуального эффекта (оранжевые точки на орудиях):
         # if "playerShip3_blue.png" in self.settings.ship_image_path: # Проверка на конкретный спрайт
-        #     pygame.draw.circle(double_fire_img, (255, 165, 0), (15, 10), 3) # Левое "орудие"
-        #     pygame.draw.circle(double_fire_img, (255, 165, 0), (double_fire_img.get_width() - 15, 10), 3) # Правое "орудие"
+        #     pygame.draw.circle(double_fire_img, _DOUBLE_FIRE_EFFECT_COLOR, (15, 10), _DOUBLE_FIRE_MARKER_RADIUS) # Левое "орудие"
+        #     pygame.draw.circle(double_fire_img, _DOUBLE_FIRE_EFFECT_COLOR, (double_fire_img.get_width() - 15, 10), _DOUBLE_FIRE_MARKER_RADIUS) # Правое "орудие"
         return double_fire_img
 
     def update_visual_state(self):
@@ -118,21 +129,21 @@ class Ship(Sprite):
         # Русский комментарий: Активирует щит.
         self.shield_active = True
         self.shield_activation_time = pygame.time.get_ticks()
-        print("Щит активирован на корабле")  # Для отладки
+        logger.debug("Щит активирован на корабле")
 
     def activate_double_fire(self):
         # Русский комментарий: Активирует двойной выстрел.
         self.double_fire_active = True
         self.double_fire_activation_time = pygame.time.get_ticks()
-        print("Двойной выстрел активирован на корабле")  # Для отладки
+        logger.debug("Двойной выстрел активирован на корабле")
 
     def _check_effects_duration(self):
         # Русский комментарий: Проверяет длительность активных эффектов.
         current_time = pygame.time.get_ticks()
         if self.shield_active and current_time - self.shield_activation_time > self.settings.shield_duration:
             self.shield_active = False
-            print("Щит деактивирован (время вышло)")  # Для отладки
+            logger.debug("Щит деактивирован (время вышло)")
 
         if self.double_fire_active and current_time - self.double_fire_activation_time > self.settings.double_fire_duration:
             self.double_fire_active = False
-            print("Двойной выстрел деактивирован (время вышло)")  # Для отладки
+            logger.debug("Двойной выстрел деактивирован (время вышло)")

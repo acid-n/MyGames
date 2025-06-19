@@ -1,5 +1,8 @@
 import os
 import math  # Импортируем модуль math для математических операций
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def lerp(start, end, t):
@@ -42,6 +45,8 @@ class Settings():
         # Настройки корабля
         self.ship_speed = 1.5
         self.ship_limit = 3
+        self.ship_display_width = 64 # Ширина корабля для отображения
+        self.ship_display_height = 64 # Высота корабля для отображения
 
         # Параметры снаряда
         self.bullet_speed = 1.5
@@ -500,12 +505,11 @@ class Settings():
                 self.alien_sprite_paths.append(path)
             else:
                 # Русский комментарий: Предупреждение о ненайденном спрайте пришельца.
-                print(
-                    f"ПРЕДУПРЕЖДЕНИЕ: Ассет не найден: спрайт пришельца - {path}")
+                logger.warning("Ассет не найден: спрайт пришельца - %s", path)
 
         if not self.alien_sprite_paths:
             # Русский комментарий: Критическая ошибка, если не загружено ни одного спрайта пришельца.
-            print("КРИТИЧЕСКАЯ ОШИБКА: Спрайты пришельцев не загружены. Используется fallback 'alien_ship_01.png'.")
+            logger.critical("Спрайты пришельцев не загружены. Используется fallback 'alien_ship_01.png'.")
             # Fallback на один из стандартных PNG спрайтов пришельцев.
             # Это гарантирует, что всегда будет хотя бы один спрайт, и он будет в новом формате.
             fallback_alien_path = os.path.join(
@@ -515,8 +519,7 @@ class Settings():
             else:
                 # Этот else маловероятен, если структура ассетов корректна, но для полноты:
                 # Русский комментарий: Критическая ошибка, если fallback спрайт также не найден.
-                print(
-                    f"КРИТИЧЕСКАЯ ОШИБКА: Fallback спрайт пришельца '{fallback_alien_path}' также не найден.")
+                logger.critical("Fallback спрайт пришельца '%s' также не найден.", fallback_alien_path)
                 # В качестве самого крайнего случая можно было бы добавить сюда создание Surface,
                 # но это усложнит Settings, лучше убедиться в наличии ассетов.
 
@@ -537,19 +540,16 @@ class Settings():
                 self.planet_sprite_paths.append(path)
             else:
                 # Русский комментарий: Предупреждение о ненайденном спрайте планеты/галактики.
-                print(
-                    f"ПРЕДУПРЕЖДЕНИЕ: Ассет не найден: спрайт планеты/галактики - {path}")
+                logger.warning("Ассет не найден: спрайт планеты/галактики - %s", path)
 
         if not self.planet_sprite_paths:
             # Русский комментарий: Информация об отсутствии загруженных спрайтов планет/галактик.
-            print("ИНФОРМАЦИЯ: Спрайты планет/галактик не загружены.")
+            logger.info("Спрайты планет/галактик не загружены.")
             # Можно добавить дефолтный, если это критично, но для фоновых объектов это может быть не обязательно.
 
     def load_level_settings(self, new_level_number):
         """Загружает настройки для нового уровня, используя динамические расчеты."""
-        # print(f"Loading settings for level {new_level_number}") # Старый лог на английском, заменен на русский ниже
-        # Лог на русском
-        print(f"Загрузка настроек для уровня {new_level_number}")
+        logger.info("Загрузка настроек для уровня %s", new_level_number)
         self.initialize_dynamic_settings(new_level_number)
 
     def increase_speed(self):
@@ -560,10 +560,7 @@ class Settings():
         # self.min_alien_speed и self.alien_points больше не масштабируются здесь (управляются уровнем)
 
         # Логирование изменения скорости
-        # Русский комментарий: Лог об увеличении скорости корабля и пуль.
-        print(f"--- Скорость корабля/пуль увеличена (глобальный масштаб) ---")
-        print(f"Новая скорость корабля: {self.ship_speed:.2f}")
-        print(f"Новая скорость пуль: {self.bullet_speed:.2f}")
-        # print(f"New min alien speed for next level: {self.min_alien_speed:.2f}") # Больше не актуально здесь
-        # print(f"New alien points: {self.alien_points}") # Также не актуально здесь
-        print(f"-----------------------")
+        logger.info("--- Скорость корабля/пуль увеличена (глобальный масштаб) ---")
+        logger.info("Новая скорость корабля: %.2f", self.ship_speed)
+        logger.info("Новая скорость пуль: %.2f", self.bullet_speed)
+        logger.info("-----------------------")

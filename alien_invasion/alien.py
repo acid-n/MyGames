@@ -3,6 +3,19 @@ from pygame.sprite import Sprite
 import sys
 import random
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Constants for alien fallback visuals and tinting
+_FALLBACK_ALIEN_SIZE = (40, 40)
+_FALLBACK_ALIEN_COLOR = (0, 255, 0) # Green
+_MIN_CHANNEL_CHOICE = 0 # For R, G, B selection
+_MAX_CHANNEL_CHOICE = 2
+_MIN_TINT_INTENSITY = 100
+_MAX_TINT_INTENSITY = 200
+_MIN_TINT_ALPHA = 50
+_MAX_TINT_ALPHA = 100
 
 
 def _apply_tint(surface, tint_color):
@@ -55,7 +68,7 @@ class Alien(Sprite):
             # всегда содержит хотя бы один путь (например, fallback 'alien_ship_01.png'),
             # как это обеспечивается в обновленном settings.py.
             # Если он все же достигается, это указывает на проблему в settings.py.
-            print("CRITICAL ERROR: No alien sprites available in settings.alien_sprite_paths, even fallback is missing!")
+            logger.critical("No alien sprites available in settings.alien_sprite_paths, even fallback is missing!")
             # В качестве крайнего случая, чтобы игра не упала, устанавливаем image_path в None
             # и полагаемся на try-except блок ниже, который создаст цветную поверхность.
             self.image_path = None
@@ -66,10 +79,9 @@ class Alien(Sprite):
             else:  # Если image_path is None (из-за критической ошибки выше)
                 raise pygame.error("No image path provided for alien sprite.")
         except pygame.error as e:
-            print(
-                f"WARNING: Failed to load alien sprite: {self.image_path} - {e}. Using fallback.")
-            self.image = pygame.Surface([40, 40])  # Fallback: зеленый квадрат
-            self.image.fill((0, 255, 0))
+            logger.warning("Failed to load alien sprite: %s - %s. Using fallback.", self.image_path, e)
+            self.image = pygame.Surface(_FALLBACK_ALIEN_SIZE)  # Fallback: зеленый квадрат
+            self.image.fill(_FALLBACK_ALIEN_COLOR)
 
         # Русский комментарий: Применяем случайный оттенок, если изображение загружено успешно
         # Проверка, что это не fallback Surface(1,1) или что-то подобное
@@ -77,28 +89,28 @@ class Alien(Sprite):
             # Выбираем случайный цвет для оттенка (R, G, B) и альфа-канал для интенсивности
             # Фракций пока нет, поэтому оттенок полностью случайный для каждого пришельца
             # 0 или 1, чтобы один из каналов был доминирующим или отсутствовал
-            r = random.randint(0, 1)
-            g = random.randint(0, 1)
-            b = random.randint(0, 1)
+            r = random.randint(0, 1) # 0 or 1 for off/on
+            g = random.randint(0, 1) # 0 or 1 for off/on
+            b = random.randint(0, 1) # 0 or 1 for off/on
             # Чтобы цвет был не слишком темным, убедимся, что хотя бы один канал не нулевой (если r,g,b все 0)
-            if r == 0 and g == 0 and b == 0:
-                choice = random.randint(0, 2)
-                if choice == 0:
+            if r == 0 and g == 0 and b == 0: # All channels are zero
+                choice = random.randint(_MIN_CHANNEL_CHOICE, _MAX_CHANNEL_CHOICE)
+                if choice == _MIN_CHANNEL_CHOICE: # 0
                     r = 1
-                elif choice == 1:
+                elif choice == _MIN_CHANNEL_CHOICE + 1: # 1
                     g = 1
                 else:
-                    b = 1
+                    b = 1 # choice will be _MAX_CHANNEL_CHOICE (2)
 
             # Интенсивность основного цвета
-            tint_r = r * random.randint(100, 200)
-            tint_g = g * random.randint(100, 200)
-            tint_b = b * random.randint(100, 200)
+            tint_r = r * random.randint(_MIN_TINT_INTENSITY, _MAX_TINT_INTENSITY)
+            tint_g = g * random.randint(_MIN_TINT_INTENSITY, _MAX_TINT_INTENSITY)
+            tint_b = b * random.randint(_MIN_TINT_INTENSITY, _MAX_TINT_INTENSITY)
             # Прозрачность оттенка (50-100 из 255)
-            tint_alpha = random.randint(50, 100)
+            tint_alpha = random.randint(_MIN_TINT_ALPHA, _MAX_TINT_ALPHA)
 
             chosen_tint_color = (tint_r, tint_g, tint_b, tint_alpha)
-            # print(f"Применяем оттенок {chosen_tint_color} к {self.image_path}") # Для отладки
+            logger.debug("Применяем оттенок %s к %s", chosen_tint_color, self.image_path if self.image_path else "N/A")
             self.image = _apply_tint(self.image, chosen_tint_color)
 
         # Масштабирование спрайта пришельца (если нужно, например, до 50x50)

@@ -1,4 +1,7 @@
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class GameStats():
@@ -22,14 +25,14 @@ class GameStats():
             with open(self.settings.highscore_filepath, 'r') as f:
                 self.high_score = json.load(f)
         except FileNotFoundError:
+            logger.info("High score file not found (%s). Starting with high score 0.", self.settings.highscore_filepath)
             self.high_score = 0  # Файл не найден, начинаем с рекорда 0
         except json.JSONDecodeError:
-            print(
-                f"Warning: Could not decode JSON from {self.settings.highscore_filepath}. Starting with high score 0.")
+            logger.warning("Could not decode JSON from %s. Starting with high score 0.", self.settings.highscore_filepath)
             self.high_score = 0
         except Exception as e:
-            print(
-                f"Warning: Could not load high score from {self.settings.highscore_filepath} due to an unexpected error: {e}. Starting with high score 0.")
+            logger.error("Could not load high score from %s due to an unexpected error: %s. Starting with high score 0.",
+                         self.settings.highscore_filepath, e, exc_info=True)
             self.high_score = 0
 
     def _save_high_score(self):
@@ -38,8 +41,8 @@ class GameStats():
             with open(self.settings.highscore_filepath, 'w') as f:
                 json.dump(self.high_score, f)
         except Exception as e:
-            print(
-                f"Warning: Could not save high score to {self.settings.highscore_filepath}. Error: {e}")
+            logger.error("Could not save high score to %s. Error: %s",
+                         self.settings.highscore_filepath, e, exc_info=True)
 
     def reset_stats(self):
         """Инициализирует статистику, изменяющуюся в ходе игры"""
