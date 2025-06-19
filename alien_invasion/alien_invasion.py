@@ -19,6 +19,27 @@ from alien_invasion.space_object import SpaceObject  # Added import
 import random
 # Импортируем math для floor, ceil, или других функций, если понадобятся.
 import math
+import logging
+
+# Constants for AlienInvasion layout, timing, and game rules
+logger = logging.getLogger(__name__) # Logger for this module
+
+_MENU_BUTTON_SPACING_Y = 20
+_PAUSE_MENU_BUTTON_SPACING_Y = 10
+_EXPLOSION_SOUND_INDEX_START = 1
+_EXPLOSION_SOUND_INDEX_END = 3 # Last index is 3, so range will be (1, 4)
+_PAUSE_ICON_SIZE = (32, 32)
+_MILLISECONDS_PER_SECOND = 1000
+_SPACE_OBJECT_BASE_INTERVAL_S = 40
+_SPACE_OBJECT_INTERVAL_VARIANCE_S = 8
+_DOUBLE_BULLET_X_OFFSET = 10
+_ALIEN_FLEET_BOTTOM_BUFFER_FACTOR = 2.0 # Multiplier for alien_height
+_POWERUP_BASE_DROP_RATE = 0.07
+_SHIELD_POWERUP_MIN_LEVEL = 2
+_DOUBLE_FIRE_POWERUP_MIN_LEVEL = 3
+_PAUSE_TEXT_SPACING_ABOVE_BUTTON = 20
+_PAUSE_ELEMENT_TOP_MARGIN = 20
+_PAUSE_ICON_TEXT_SPACING = 10
 
 
 class AlienInvasion:
@@ -36,8 +57,7 @@ class AlienInvasion:
 
         # Проверка поддержки расширенных изображений (PNG)
         if not pygame.image.get_extended():
-            # Русский комментарий: Ошибка, если Pygame собран без поддержки PNG.
-            print("ОШИБКА: Pygame собран без поддержки расширенных изображений (например, для загрузки PNG). Проверьте установку Pygame.")
+            logger.critical("Pygame собран без поддержки расширенных изображений (например, для загрузки PNG). Проверьте установку Pygame.")
             sys.exit(
                 "Pygame не поддерживает PNG. Убедитесь, что SDL_image установлен с поддержкой PNG.")
 
@@ -70,9 +90,9 @@ class AlienInvasion:
         # Расположение кнопки "Новая игра" по центру экрана
         self.new_game_button.rect.center = self.screen.get_rect().center
 
-        # Расположение кнопки "Выход" по центру горизонтали, под кнопкой "Новая игра" с отступом 20px
+        # Расположение кнопки "Выход" по центру горизонтали, под кнопкой "Новая игра" с отступом
         self.exit_button.rect.centerx = self.screen.get_rect().centerx
-        self.exit_button.rect.top = self.new_game_button.rect.bottom + 20
+        self.exit_button.rect.top = self.new_game_button.rect.bottom + _MENU_BUTTON_SPACING_Y
 
         # Кнопки меню паузы
         self.resume_button = Button(self, self.settings.text_resume_button)
@@ -88,11 +108,11 @@ class AlienInvasion:
 
         # Расположение кнопки "Заново" (в меню паузы) под кнопкой "Продолжить"
         self.restart_button_paused.rect.centerx = self.screen.get_rect().centerx
-        self.restart_button_paused.rect.top = self.resume_button.rect.bottom + 10  # Отступ 10px
+        self.restart_button_paused.rect.top = self.resume_button.rect.bottom + _PAUSE_MENU_BUTTON_SPACING_Y
 
         # Расположение кнопки "Главное меню" под кнопкой "Заново" (в меню паузы)
         self.main_menu_button.rect.centerx = self.screen.get_rect().centerx
-        self.main_menu_button.rect.top = self.restart_button_paused.rect.bottom + 10
+        self.main_menu_button.rect.top = self.restart_button_paused.rect.bottom + _PAUSE_MENU_BUTTON_SPACING_Y
 
         # _create_fleet() будет вызываться в _start_new_game(), а не при инициализации игры.
         # self._create_fleet() # Удалено отсюда, чтобы флот не создавался до начала новой игры.
@@ -114,36 +134,25 @@ class AlienInvasion:
         try:
             pygame.mixer.init()  # Параметры по умолчанию
             self.sound_system_initialized = True
-            # Русский комментарий: Информация об успешной инициализации микшера.
-            print(
-                "ИНФОРМАЦИЯ: Микшер Pygame успешно инициализирован с настройками по умолчанию.")
+            logger.info("Микшер Pygame успешно инициализирован с настройками по умолчанию.")
         except pygame.error as e_mixer_default:
-            # Русский комментарий: Предупреждение о неудачной инициализации микшера по умолчанию.
-            print(
-                f"ПРЕДУПРЕЖДЕНИЕ: Инициализация pygame.mixer.init() по умолчанию не удалась: {e_mixer_default}")
-            print("ИНФОРМАЦИЯ: Попытка инициализации микшера с SDL_AUDIODRIVER=dummy ...")
+            logger.warning("Инициализация pygame.mixer.init() по умолчанию не удалась: %s", e_mixer_default)
+            logger.info("Попытка инициализации микшера с SDL_AUDIODRIVER=dummy ...")
             # Установка переменной окружения для "пустого" аудиодрайвера
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
             try:
                 pygame.mixer.init()
                 # Система инициализирована, но это "пустой" драйвер
                 self.sound_system_initialized = True
-                # Русский комментарий: Информация об инициализации с dummy драйвером.
-                print(
-                    "ИНФОРМАЦИЯ: Микшер Pygame успешно инициализирован с SDL_AUDIODRIVER=dummy. В игре не будет звука.")
+                logger.info("Микшер Pygame успешно инициализирован с SDL_AUDIODRIVER=dummy. В игре не будет звука.")
                 self.settings.audio_enabled = False  # Обновляем флаг в настройках
             except pygame.error as e_mixer_dummy:
-                # Русский комментарий: Ошибка инициализации даже с dummy драйвером.
-                print(
-                    f"ОШИБКА: pygame.mixer.init() с SDL_AUDIODRIVER=dummy также не удалась: {e_mixer_dummy}")
-                print(
-                    "ОШИБКА: Звуковая система не может быть инициализирована. Игра будет запущена без звука.")
+                logger.error("pygame.mixer.init() с SDL_AUDIODRIVER=dummy также не удалась: %s", e_mixer_dummy)
+                logger.error("Звуковая система не может быть инициализирована. Игра будет запущена без звука.")
                 self.settings.audio_enabled = False  # Обновляем флаг в настройках
 
         if not self.sound_system_initialized or not self.settings.audio_enabled:
-            # Русский комментарий: Предупреждение об отключенной аудиосистеме.
-            print(
-                "ПРЕДУПРЕЖДЕНИЕ: АУДИОСИСТЕМА ОТКЛЮЧЕНА. В ИГРЕ НЕ БУДЕТ ЗВУКОВЫХ ЭФФЕКТОВ И МУЗЫКИ.")
+            logger.warning("АУДИОСИСТЕМА ОТКЛЮЧЕНА. В ИГРЕ НЕ БУДЕТ ЗВУКОВЫХ ЭФФЕКТОВ И МУЗЫКИ.")
         # --- Конец новой последовательности инициализации аудио ---
 
         # Загрузка звуковых эффектов (только если аудиосистема включена)
@@ -159,17 +168,14 @@ class AlienInvasion:
                 if os.path.exists(sfx_laser_path):
                     self.sound_laser = pygame.mixer.Sound(sfx_laser_path)
                 else:
-                    # Русский комментарий: Предупреждение о ненайденном файле звука.
-                    print(
-                        f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sfx_laser_path}")
+                    logger.warning("Загрузка ассета не удалась: Звуковой файл не найден: %s", sfx_laser_path)
 
                 # Путь к файлу звука подбора бонуса из настроек
                 sfx_powerup_path = self.settings.sound_powerup_path
                 if os.path.exists(sfx_powerup_path):
                     self.sound_powerup = pygame.mixer.Sound(sfx_powerup_path)
                 else:
-                    print(
-                        f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sfx_powerup_path}")
+                    logger.warning("Загрузка ассета не удалась: Звуковой файл не найден: %s", sfx_powerup_path)
 
                 # Путь к файлу звука перезарядки щита из настроек
                 sfx_shield_path = self.settings.sound_shield_recharge_path
@@ -177,12 +183,11 @@ class AlienInvasion:
                     self.sound_shield_recharge = pygame.mixer.Sound(
                         sfx_shield_path)
                 else:
-                    print(
-                        f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sfx_shield_path}")
+                    logger.warning("Загрузка ассета не удалась: Звуковой файл не найден: %s", sfx_shield_path)
 
                 # Загрузка нескольких звуков взрыва с использованием паттерна из настроек
                 # Предполагаем имена explosion01.ogg, explosion02.ogg, explosion03.ogg
-                for i in range(1, 4):
+                for i in range(_EXPLOSION_SOUND_INDEX_START, _EXPLOSION_SOUND_INDEX_END + 1):
                     # Формируем путь к звуку взрыва, используя паттерн из настроек
                     sound_path = self.settings.sound_explosion_pattern.format(
                         i)
@@ -190,17 +195,12 @@ class AlienInvasion:
                         self.sounds_explosion.append(
                             pygame.mixer.Sound(sound_path))
                     else:
-                        print(
-                            f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sound_path}")
+                        logger.warning("Загрузка ассета не удалась: Звуковой файл не найден: %s", sound_path)
                 if not self.sounds_explosion:
-                    # Русский комментарий: Предупреждение, если звуки взрыва не загружены.
-                    print(
-                        "ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуки взрыва не загружены (файлы не найдены или паттерн некорректен).")
+                    logger.warning("Загрузка ассета не удалась: Звуки взрыва не загружены (файлы не найдены или паттерн некорректен).")
 
             except pygame.error as e:
-                # Русский комментарий: Предупреждение об ошибке при загрузке звуковых эффектов.
-                print(
-                    f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Ошибка инициализации/загрузки звуковых эффектов: {e}")
+                logger.warning("Загрузка ассета не удалась: Ошибка инициализации/загрузки звуковых эффектов: %s", e, exc_info=True)
 
             # Загрузка и воспроизведение фоновой музыки
             # TODO: Раскомментировать и протестировать загрузку музыки, если music_volume будет добавлено в Settings.
@@ -211,17 +211,15 @@ class AlienInvasion:
             #         # pygame.mixer.music.set_volume(self.settings.music_volume) # Громкость музыки (0.0 до 1.0)
             #         pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
             #     else:
-            #         print(f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Файл фоновой музыки не найден: {music_path}")
+            #         logger.warning("Загрузка ассета не удалась: Файл фоновой музыки не найден: %s", music_path)
             # except pygame.error as e:
-            #     print(f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Ошибка загрузки или воспроизведения фоновой музыки {music_path}: {e}")
+            #     logger.warning("Загрузка ассета не удалась: Ошибка загрузки или воспроизведения фоновой музыки %s: %s", music_path, e, exc_info=True)
         else:
-            # Русский комментарий: Информация о пропуске загрузки звуков.
-            print(
-                "ИНФОРМАЦИЯ: Загрузка звуков пропущена, так как аудиосистема отключена.")
+            logger.info("Загрузка звуков пропущена, так как аудиосистема отключена.")
 
         # Загрузка UI иконок (например, для кнопки паузы)
         self.pause_icon = None
-        icon_size_ui = (32, 32)
+        # icon_size_ui = (32, 32) # Replaced by _PAUSE_ICON_SIZE
 
         try:
             # Русский комментарий: Путь к иконке паузы из настроек.
@@ -230,23 +228,21 @@ class AlienInvasion:
                 self.pause_icon = pygame.image.load(
                     pause_icon_path).convert_alpha()
                 self.pause_icon = pygame.transform.scale(
-                    self.pause_icon, icon_size_ui)
+                    self.pause_icon, _PAUSE_ICON_SIZE)
             else:
                 # Русский комментарий: Предупреждение о ненайденной иконке UI.
-                print(
-                    f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Иконка UI не найдена: {pause_icon_path}")
+                logger.warning("Загрузка ассета не удалась: Иконка UI не найдена: %s", pause_icon_path)
             # Иконка gear.png (для кнопки настроек/меню) пока не используется напрямую, загрузка пропущена.
         except pygame.error as e:
             # Русский комментарий: Предупреждение об ошибке загрузки UI иконок.
-            print(
-                f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Ошибка загрузки UI иконок для AlienInvasion: {e}")
+            logger.warning("Загрузка ассета не удалась: Ошибка загрузки UI иконок для AlienInvasion: %s", e, exc_info=True)
 
         # Группа для процедурных космических объектов (планеты, галактики)
         self.space_objects = pygame.sprite.Group()
         self.last_space_object_spawn_time = pygame.time.get_ticks()
-        # Интервал появления космических объектов: 40 +/- 8 секунд (в миллисекундах)
-        self.space_object_spawn_interval_min = (40 - 8) * 1000  # 32 секунды
-        self.space_object_spawn_interval_max = (40 + 8) * 1000  # 48 секунд
+        # Интервал появления космических объектов
+        self.space_object_spawn_interval_min = (_SPACE_OBJECT_BASE_INTERVAL_S - _SPACE_OBJECT_INTERVAL_VARIANCE_S) * _MILLISECONDS_PER_SECOND
+        self.space_object_spawn_interval_max = (_SPACE_OBJECT_BASE_INTERVAL_S + _SPACE_OBJECT_INTERVAL_VARIANCE_S) * _MILLISECONDS_PER_SECOND
         self.current_spawn_interval = random.randint(
             self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
 
@@ -419,8 +415,8 @@ class AlienInvasion:
                 # Смещаем снаряды относительно центра корабля
                 # Начальная позиция обоих снарядов - верхушка центра корабля.
                 # Затем смещаем rect.x для каждого. self.y в классе Bullet уже установлен корректно.
-                bullet1.rect.x -= 10  # Сместить влево
-                bullet2.rect.x += 10  # Сместить вправо
+                bullet1.rect.x -= _DOUBLE_BULLET_X_OFFSET
+                bullet2.rect.x += _DOUBLE_BULLET_X_OFFSET
 
                 self.bullets.add(bullet1)
                 self.bullets.add(bullet2)
@@ -577,13 +573,13 @@ class AlienInvasion:
         # Расчет количества рядов пришельцев (по вертикали) с учетом новых правил.
         ship_height = self.ship.rect.height
         # Рассчитываем доступное вертикальное пространство для пришельцев,
-        # оставляя буфер от корабля (например, 2 высоты пришельца).
+        # оставляя буфер от корабля.
         available_height_for_aliens = (self.settings.screen_height -
                                        # Отступ сверху.
                                        (self.settings.fleet_top_margin_factor * alien_height) -
                                        ship_height -  # Высота корабля.
-                                       # Буфер в 2 высоты пришельца от корабля.
-                                       (2 * alien_height))
+                                       # Буфер от корабля.
+                                       (_ALIEN_FLEET_BOTTOM_BUFFER_FACTOR * alien_height))
 
         # Максимально возможное количество рядов, если бы они занимали все доступное пространство.
         # self.settings.alien_vertical_spacing_factor определяет, сколько "высот пришельца" занимает один ряд + его отступ.
@@ -625,18 +621,17 @@ class AlienInvasion:
         # Логика предварительного назначения бонусов (система "мешка с шариками").
         # Эта система определяет, из каких пришельцев выпадут бонусы.
         enemy_count = len(self.aliens)
-        # Базовая доля пришельцев, из которых выпадут бонусы (например, 7%).
-        # Эту долю можно вынести в self.settings, если потребуется гибкая настройка.
-        drop_rate = 0.07  # TODO: Перенести в Settings для настройки.
+        # Базовая доля пришельцев, из которых выпадут бонусы.
+        # drop_rate = 0.07 # Replaced by _POWERUP_BASE_DROP_RATE
         # Количество бонусов, которое должно выпасть на уровне.
         # Округляем до ближайшего большего целого, чтобы даже при малом количестве врагов был шанс на бонус.
-        drops_per_level = math.ceil(enemy_count * drop_rate)
+        drops_per_level = math.ceil(enemy_count * _POWERUP_BASE_DROP_RATE)
 
         # Определяем, какие типы бонусов доступны на текущем уровне.
         available_powerup_types = []
-        if self.stats.level >= 2:  # Щит доступен со 2-го уровня.
+        if self.stats.level >= _SHIELD_POWERUP_MIN_LEVEL:
             available_powerup_types.append('shield')
-        if self.stats.level >= 3:  # Двойной выстрел доступен с 3-го уровня.
+        if self.stats.level >= _DOUBLE_FIRE_POWERUP_MIN_LEVEL:
             available_powerup_types.append('double_fire')
         # Сюда можно добавить другие типы бонусов и условия их появления.
 
@@ -663,7 +658,7 @@ class AlienInvasion:
                     chosen_powerup_type = random.choice(
                         available_powerup_types)
                     alien_obj.assigned_powerup_type = chosen_powerup_type
-                    # print(f"DEBUG: Assigned {chosen_powerup_type} to alien at {alien_obj.rect.topleft}") # Для отладки
+                    logger.debug("Assigned %s to alien at %s", chosen_powerup_type, alien_obj.rect.topleft)
 
     def _create_alien(self, alien_number, row_number, alien_width, alien_height, specific_image_path=None):
         """Создание пришельца и размещение его в ряду."""  # Добавлены alien_width, alien_height, specific_image_path в параметры.
@@ -730,24 +725,22 @@ class AlienInvasion:
             pause_image = temp_pause_image.convert_alpha()
             screen_rect = self.screen.get_rect()
             # Располагаем текст "Пауза" над кнопками.
-            # 20px над кнопкой "Продолжить".
-            text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - 20
+            text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - _PAUSE_TEXT_SPACING_ABOVE_BUTTON
             pause_rect = pause_image.get_rect(
                 centerx=screen_rect.centerx, top=text_rect_y_offset)
 
             # Проверка, чтобы текст не уехал слишком высоко, если кнопки расположены очень высоко.
-            if pause_rect.top < 20:  # Примерный отступ сверху.
-                pause_rect.top = 20
+            if pause_rect.top < _PAUSE_ELEMENT_TOP_MARGIN:
+                pause_rect.top = _PAUSE_ELEMENT_TOP_MARGIN
 
             # Отрисовка иконки паузы, если она есть.
             if self.pause_icon:
                 pause_icon_rect = self.pause_icon.get_rect(
                     centerx=screen_rect.centerx)
                 # Позиционируем иконку над текстом "Пауза".
-                # 10px над текстом.
-                pause_icon_rect.bottom = pause_rect.top - 10
-                if pause_icon_rect.top < 20:
-                    pause_icon_rect.top = 20  # Не слишком высоко.
+                pause_icon_rect.bottom = pause_rect.top - _PAUSE_ICON_TEXT_SPACING
+                if pause_icon_rect.top < _PAUSE_ELEMENT_TOP_MARGIN: # Use the same top margin
+                    pause_icon_rect.top = _PAUSE_ELEMENT_TOP_MARGIN
                 self.screen.blit(self.pause_icon, pause_icon_rect)
 
             # Отрисовка текста "Пауза".
@@ -796,20 +789,29 @@ class AlienInvasion:
                     # target_size_ratio_range, speed, fade_duration_ms - используются значения по умолчанию из SpaceObject.
                 )
                 self.space_objects.add(new_object)
-                # print(f"DEBUG: Spawned SpaceObject: {image_path}") # Для отладки
+                logger.debug("Spawned SpaceObject: %s", image_path)
 
                 self.last_space_object_spawn_time = current_time
                 # Установка нового случайного интервала для следующего объекта.
                 self.current_spawn_interval = random.randint(
                     self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
             # else:
-                # print("DEBUG: Нет доступных спрайтов для космических объектов.") # Для отладки
+                # logger.debug("Нет доступных спрайтов для космических объектов.") # Для отладки
 
 
 if __name__ == '__main__':
+    # Настройка базовой конфигурации логирования
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    logging.info("Application started.") # Пример информационного сообщения
+
     # Создание экземпляра и запуск игры.
     ai = AlienInvasion()
     ai.run_game()
+    logging.info("Application finished.")
 
 # --- Пример кода для профилирования (оставлен закомментированным для возможности использования) ---
 # import cProfile

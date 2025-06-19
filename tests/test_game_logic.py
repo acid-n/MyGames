@@ -469,7 +469,83 @@ class TestScoreboardUpdates(unittest.TestCase):
         """Очистка после тестов, если необходимо (например, удалить тестовые файлы)."""
         # if os.path.exists("test_highscore.json"):
         #     os.remove("test_highscore.json")
+        pygame.font.quit() # Освобождаем ресурсы шрифтов
+        pygame.display.quit() # Освобождаем ресурсы дисплея
         pass
+
+class TestGameStats(unittest.TestCase):
+    """Тесты для класса GameStats."""
+
+    def setUp(self):
+        """Настройка перед каждым тестом."""
+        self.settings = Settings()
+        # Используем уникальное имя файла для тестов, чтобы не пересекаться с реальным файлом.
+        self.test_highscore_path = "test_highscore.json"
+        self.settings.highscore_filepath = self.test_highscore_path
+
+        # Mock ai_game, достаточно только атрибута settings для GameStats
+        self.mock_ai_game = mock.Mock()
+        self.mock_ai_game.settings = self.settings
+
+        # Удаляем тестовый файл рекордов перед каждым тестом, если он существует
+        if os.path.exists(self.test_highscore_path):
+            os.remove(self.test_highscore_path)
+
+    def tearDown(self):
+        """Очистка после каждого теста."""
+        if os.path.exists(self.test_highscore_path):
+            os.remove(self.test_highscore_path)
+
+    def test_load_highscore_corrupted_file(self):
+        """Тест загрузки рекорда из поврежденного JSON файла."""
+        # Создаем файл с некорректным JSON
+        with open(self.test_highscore_path, 'w') as f:
+            f.write("{'score': 1000") # Незакрытая скобка, некорректный JSON
+
+        # GameStats инициализируется и должен попытаться загрузить рекорд
+        # _load_high_score вызывается в __init__
+        stats = GameStats(self.mock_ai_game)
+
+        # Ожидаем, что high_score будет 0 из-за ошибки декодирования
+        self.assertEqual(stats.high_score, 0,
+                         "High score должен быть 0, если JSON файл поврежден.")
+
+    def test_load_highscore_file_not_found(self):
+        """Тест загрузки рекорда, когда файл не найден."""
+        # Убедимся, что файл не существует (setUp должен был это обеспечить)
+        self.assertFalse(os.path.exists(self.test_highscore_path),
+                         "Файл рекордов не должен существовать для этого теста.")
+
+        stats = GameStats(self.mock_ai_game)
+        self.assertEqual(stats.high_score, 0,
+                         "High score должен быть 0, если файл не найден.")
+
+    def test_load_highscore_success(self):
+        """Тест успешной загрузки рекорда из файла."""
+        expected_score = 12345
+        # Создаем файл с корректным JSON
+        with open(self.test_highscore_path, 'w') as f:
+            import json # нужен для json.dump
+            json.dump(expected_score, f)
+
+        stats = GameStats(self.mock_ai_game)
+        self.assertEqual(stats.high_score, expected_score,
+                         f"High score должен быть {expected_score} при успешной загрузке.")
+
+    def test_save_high_score(self):
+        """Тест сохранения рекорда."""
+        stats = GameStats(self.mock_ai_game)
+        stats.high_score = 98765
+        stats._save_high_score() # Метод для сохранения
+
+        self.assertTrue(os.path.exists(self.test_highscore_path), "Файл рекордов должен быть создан.")
+
+        # Проверяем содержимое файла
+        with open(self.test_highscore_path, 'r') as f:
+            import json # нужен для json.load
+            saved_score = json.load(f)
+        self.assertEqual(saved_score, 98765, "Сохраненный рекорд не соответствует ожидаемому.")
+
 
 if __name__ == '__main__':
     # Импортируем Button здесь, чтобы избежать циклического импорта на уровне модуля,

@@ -1,8 +1,16 @@
 import pygame.font
 import os  # Added import
 import pygame  # Added import
+import logging
 from pygame.sprite import Group
 from alien_invasion.ship import Ship
+
+# Constants for Scoreboard layout and appearance
+_UI_ICON_SIZE = (32, 32)  # Standard size for UI icons like hearts, stars
+_SCORE_FRAME_PADDING = 15 # Padding inside the score frame to the text
+_LIVES_ICON_TEXT_SPACING = 5 # Space between lives heart icon and 'xN' text
+
+logger = logging.getLogger(__name__)
 
 
 class Scoreboard():
@@ -26,7 +34,7 @@ class Scoreboard():
         self.star_icon = None  # Пока не используется активно
         self.flag_icon = None  # Пока не используется активно
 
-        icon_size = (32, 32)  # Требуемый размер иконок
+        # icon_size = (32, 32) # Replaced by _UI_ICON_SIZE
 
         try:
             # Русский комментарий: Иконка для жизней (сердце) из настроек
@@ -35,14 +43,12 @@ class Scoreboard():
                 self.heart_icon = pygame.image.load(
                     heart_icon_path).convert_alpha()
                 self.heart_icon = pygame.transform.scale(
-                    self.heart_icon, icon_size)
+                    self.heart_icon, _UI_ICON_SIZE)
             else:
-                print(
-                    f"WARNING: UI asset not found: {heart_icon_path}. Feature may be disabled or use fallback.")
+                logger.warning("UI asset not found: %s. Feature may be disabled or use fallback.", heart_icon_path)
 
         except pygame.error as e:
-            print(
-                f"WARNING: UI asset not found: Error loading UI icons for Scoreboard: {e}. Feature may be disabled or use fallback.")
+            logger.warning("Error loading UI icons for Scoreboard: %s. Feature may be disabled or use fallback.", e, exc_info=True)
 
         # Русский комментарий: Загрузка и однократное масштабирование фона рамки для счета
         self.original_score_frame_bg = None
@@ -55,15 +61,12 @@ class Scoreboard():
                 self.original_score_frame_bg = pygame.image.load(
                     frame_bg_path).convert_alpha()
                 self.frame_loaded_successfully = True
-                print(
-                    f"INFO: UI asset loaded: Score frame background '{frame_bg_path}'.")
+                logger.info("UI asset loaded: Score frame background '%s'.", frame_bg_path)
             else:
-                print(
-                    f"WARNING: UI asset not found: Score frame background '{frame_bg_path}'. Frame will be inactive.")
+                logger.warning("UI asset not found: Score frame background '%s'. Frame will be inactive.", frame_bg_path)
                 # self.frame_loaded_successfully остается False
         except pygame.error as e:
-            print(
-                f"WARNING: UI asset not found: Error loading score frame background: {e}. Frame will be inactive.")
+            logger.warning("Error loading score frame background: %s. Frame will be inactive.", e, exc_info=True)
             # self.frame_loaded_successfully остается False
 
         # Подготовка изображений счетов. Эти методы создадут score_rect, high_score_rect и т.д.
@@ -74,8 +77,8 @@ class Scoreboard():
 
         # Русский комментарий: Теперь, когда текстовые rects доступны, масштабируем фон рамки, если он был загружен
         if self.frame_loaded_successfully and self.original_score_frame_bg:
-            # Русский комментарий: Отступы внутри рамки до текста. Можно вынести в settings.
-            frame_padding = 15  # px
+            # Русский комментарий: Отступы внутри рамки до текста.
+            # frame_padding = 15  # px # Replaced by _SCORE_FRAME_PADDING
 
             # Русский комментарий: Определяем область, которую должна покрыть рамка.
             # Начнем с self.score_rect.
@@ -94,8 +97,8 @@ class Scoreboard():
                 # if hasattr(self, 'high_score_rect'):
                 # combined_rect_for_frame.union_ip(self.high_score_rect) # Раскомментировать, если нужно включить и рекорд
 
-                target_frame_width = combined_rect_for_frame.width + 2 * frame_padding
-                target_frame_height = combined_rect_for_frame.height + 2 * frame_padding
+                target_frame_width = combined_rect_for_frame.width + 2 * _SCORE_FRAME_PADDING
+                target_frame_height = combined_rect_for_frame.height + 2 * _SCORE_FRAME_PADDING
 
                 self.scaled_score_frame_bg = pygame.transform.scale(
                     self.original_score_frame_bg, (target_frame_width, target_frame_height))
@@ -105,8 +108,7 @@ class Scoreboard():
             else:
                 # Русский комментарий: score_rect еще не готов, это неожиданно. Отключаем рамку.
                 self.frame_loaded_successfully = False
-                print(
-                    f"WARNING: Scoreboard frame disabled because score_rect was not available after prep_score().")
+                logger.warning("Scoreboard frame disabled because score_rect was not available after prep_score().")
 
     def prep_score(self):
         """Преобразует текущий счет в графическое изображение"""
@@ -185,7 +187,7 @@ class Scoreboard():
             ships_text_img = temp_ships_text_img.convert()
             ships_text_rect = ships_text_img.get_rect()
             # Позиционируем текст справа от иконки сердца
-            ships_text_rect.left = heart_rect.right + 5  # Небольшой отступ
+            ships_text_rect.left = heart_rect.right + _LIVES_ICON_TEXT_SPACING
             ships_text_rect.centery = heart_rect.centery
             self.ships_items_for_draw.append(
                 {'image': ships_text_img, 'rect': ships_text_rect})
