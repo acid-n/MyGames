@@ -1,8 +1,9 @@
 import pygame.font
-import os # Added import
-import pygame # Added import
+import os  # Added import
+import pygame  # Added import
 from pygame.sprite import Group
 from alien_invasion.ship import Ship
+
 
 class Scoreboard():
     """Класс для вывода игровой информации"""
@@ -17,26 +18,31 @@ class Scoreboard():
 
         # Настройки шрифта для вывода счета
         self.text_color = self.settings.scoreboard_text_color
-        self.font = pygame.font.SysFont(self.settings.scoreboard_font_name, self.settings.scoreboard_font_size)
+        self.font = pygame.font.SysFont(
+            self.settings.scoreboard_font_name, self.settings.scoreboard_font_size)
 
         # Загрузка UI иконок
         self.heart_icon = None
-        self.star_icon = None # Пока не используется активно
-        self.flag_icon = None # Пока не используется активно
+        self.star_icon = None  # Пока не используется активно
+        self.flag_icon = None  # Пока не используется активно
 
-        icon_size = (32, 32) # Требуемый размер иконок
+        icon_size = (32, 32)  # Требуемый размер иконок
 
         try:
             # Русский комментарий: Иконка для жизней (сердце) из настроек
             heart_icon_path = self.settings.ui_heart_icon_path
             if os.path.exists(heart_icon_path):
-                self.heart_icon = pygame.image.load(heart_icon_path).convert_alpha()
-                self.heart_icon = pygame.transform.scale(self.heart_icon, icon_size)
+                self.heart_icon = pygame.image.load(
+                    heart_icon_path).convert_alpha()
+                self.heart_icon = pygame.transform.scale(
+                    self.heart_icon, icon_size)
             else:
-                print(f"WARNING: UI asset not found: {heart_icon_path}. Feature may be disabled or use fallback.")
+                print(
+                    f"WARNING: UI asset not found: {heart_icon_path}. Feature may be disabled or use fallback.")
 
         except pygame.error as e:
-            print(f"WARNING: UI asset not found: Error loading UI icons for Scoreboard: {e}. Feature may be disabled or use fallback.")
+            print(
+                f"WARNING: UI asset not found: Error loading UI icons for Scoreboard: {e}. Feature may be disabled or use fallback.")
 
         # Русский комментарий: Загрузка и однократное масштабирование фона рамки для счета
         self.original_score_frame_bg = None
@@ -46,14 +52,18 @@ class Scoreboard():
         try:
             frame_bg_path = self.settings.ui_score_frame_bg_path
             if os.path.exists(frame_bg_path):
-                self.original_score_frame_bg = pygame.image.load(frame_bg_path).convert_alpha()
+                self.original_score_frame_bg = pygame.image.load(
+                    frame_bg_path).convert_alpha()
                 self.frame_loaded_successfully = True
-                print(f"INFO: UI asset loaded: Score frame background '{frame_bg_path}'.")
+                print(
+                    f"INFO: UI asset loaded: Score frame background '{frame_bg_path}'.")
             else:
-                print(f"WARNING: UI asset not found: Score frame background '{frame_bg_path}'. Frame will be inactive.")
+                print(
+                    f"WARNING: UI asset not found: Score frame background '{frame_bg_path}'. Frame will be inactive.")
                 # self.frame_loaded_successfully остается False
         except pygame.error as e:
-            print(f"WARNING: UI asset not found: Error loading score frame background: {e}. Frame will be inactive.")
+            print(
+                f"WARNING: UI asset not found: Error loading score frame background: {e}. Frame will be inactive.")
             # self.frame_loaded_successfully остается False
 
         # Подготовка изображений счетов. Эти методы создадут score_rect, high_score_rect и т.д.
@@ -65,7 +75,7 @@ class Scoreboard():
         # Русский комментарий: Теперь, когда текстовые rects доступны, масштабируем фон рамки, если он был загружен
         if self.frame_loaded_successfully and self.original_score_frame_bg:
             # Русский комментарий: Отступы внутри рамки до текста. Можно вынести в settings.
-            frame_padding = 15 # px
+            frame_padding = 15  # px
 
             # Русский комментарий: Определяем область, которую должна покрыть рамка.
             # Начнем с self.score_rect.
@@ -87,15 +97,16 @@ class Scoreboard():
                 target_frame_width = combined_rect_for_frame.width + 2 * frame_padding
                 target_frame_height = combined_rect_for_frame.height + 2 * frame_padding
 
-                self.scaled_score_frame_bg = pygame.transform.scale(self.original_score_frame_bg, (target_frame_width, target_frame_height))
+                self.scaled_score_frame_bg = pygame.transform.scale(
+                    self.original_score_frame_bg, (target_frame_width, target_frame_height))
                 self.score_frame_rect = self.scaled_score_frame_bg.get_rect()
                 # Русский комментарий: Центрируем рамку относительно объединенного текстового блока.
                 self.score_frame_rect.center = combined_rect_for_frame.center
             else:
                 # Русский комментарий: score_rect еще не готов, это неожиданно. Отключаем рамку.
                 self.frame_loaded_successfully = False
-                print(f"WARNING: Scoreboard frame disabled because score_rect was not available after prep_score().")
-
+                print(
+                    f"WARNING: Scoreboard frame disabled because score_rect was not available after prep_score().")
 
     def prep_score(self):
         """Преобразует текущий счет в графическое изображение"""
@@ -107,7 +118,8 @@ class Scoreboard():
         padding_x = self.settings.score_padding_right
         padding_y = self.settings.score_padding_top
 
-        temp_score_image = self.font.render(score_str, True, self.text_color, text_bg_color)
+        temp_score_image = self.font.render(
+            score_str, True, self.text_color, text_bg_color)
         if text_bg_color is None:
             self.score_image = temp_score_image.convert_alpha()
         else:
@@ -126,20 +138,24 @@ class Scoreboard():
         # Русский комментарий: Фон текста рекорда делаем прозрачным, если рамка будет общая (пока не используется для рекорда).
         # Если рамка отдельная для рекорда или ее нет, используем цвет фона игры.
         # В текущей реализации рамка делается только для score и level, так что рекорд имеет свой фон.
-        text_bg_color_high = self.settings.bg_color # Оставляем фон для рекорда, т.к. рамка его не покрывает
+        # Оставляем фон для рекорда, т.к. рамка его не покрывает
+        text_bg_color_high = self.settings.bg_color
 
-        temp_high_score_image = self.font.render(high_score_str, True, self.text_color, text_bg_color_high)
+        temp_high_score_image = self.font.render(
+            high_score_str, True, self.text_color, text_bg_color_high)
         self.high_score_image = temp_high_score_image.convert()
 
         # Рекорд выравнивается по центру верхней стороны
         self.high_score_rect = self.high_score_image.get_rect()
         self.high_score_rect.centerx = self.screen_rect.centerx
-        self.high_score_rect.top = self.settings.score_padding_top # Используем общий отступ сверху
+        # Используем общий отступ сверху
+        self.high_score_rect.top = self.settings.score_padding_top
 
     def prep_level(self):
         """Преобразует уровень в графическое изображение"""
         level_str = str(self.stats.level)
-        temp_level_image = self.font.render(level_str, True, self.text_color, self.settings.bg_color)
+        temp_level_image = self.font.render(
+            level_str, True, self.text_color, self.settings.bg_color)
         self.level_image = temp_level_image.convert()
 
         # Уровень выводится под текущим счетом
@@ -150,13 +166,15 @@ class Scoreboard():
     def prep_ships(self):
         # Русский комментарий: Готовит отображение количества жизней с использованием иконки сердца.
         if self.heart_icon:
-            self.ships_items_for_draw = [] # Список для хранения того, что нужно отрисовать (иконка + текст)
+            # Список для хранения того, что нужно отрисовать (иконка + текст)
+            self.ships_items_for_draw = []
 
             # Иконка сердца
             heart_rect = self.heart_icon.get_rect()
             heart_rect.left = self.settings.lives_display_padding_left
             heart_rect.top = self.settings.lives_display_padding_top
-            self.ships_items_for_draw.append({'image': self.heart_icon, 'rect': heart_rect})
+            self.ships_items_for_draw.append(
+                {'image': self.heart_icon, 'rect': heart_rect})
 
             # Текстовое представление количества жизней (например, "x3")
             ships_str = f"x{self.stats.ships_left}"
@@ -167,31 +185,34 @@ class Scoreboard():
             ships_text_img = temp_ships_text_img.convert()
             ships_text_rect = ships_text_img.get_rect()
             # Позиционируем текст справа от иконки сердца
-            ships_text_rect.left = heart_rect.right + 5 # Небольшой отступ
+            ships_text_rect.left = heart_rect.right + 5  # Небольшой отступ
             ships_text_rect.centery = heart_rect.centery
-            self.ships_items_for_draw.append({'image': ships_text_img, 'rect': ships_text_rect})
+            self.ships_items_for_draw.append(
+                {'image': ships_text_img, 'rect': ships_text_rect})
 
         else:
             # Русский комментарий: Если иконка сердца не загружена, используем старую логику с кораблями
             # Этот блок нужен, если self.heart_icon None, но self.ships должен быть атрибутом класса
-            if not hasattr(self, 'ships'): # Инициализируем ships только если его нет
-                 self.ships = Group()
+            if not hasattr(self, 'ships'):  # Инициализируем ships только если его нет
+                self.ships = Group()
             else:
-                 self.ships.empty() # Очищаем, если уже существует
+                self.ships.empty()  # Очищаем, если уже существует
 
             for ship_number in range(self.stats.ships_left):
-                ship = Ship(self.ai_game) # Убедитесь, что класс Ship импортирован
-                ship.rect.x = self.settings.lives_display_padding_left + ship_number * ship.rect.width
+                # Убедитесь, что класс Ship импортирован
+                ship = Ship(self.ai_game)
+                ship.rect.x = self.settings.lives_display_padding_left + \
+                    ship_number * ship.rect.width
                 ship.rect.y = self.settings.lives_display_padding_top
                 self.ships.add(ship)
-            self.ships_items_for_draw = None # Явный признак, что используем старую систему
+            self.ships_items_for_draw = None  # Явный признак, что используем старую систему
 
     def check_high_score(self):
         """Проверяет появился ли новый рекорд"""
         if self.stats.score > self.stats.high_score:
             self.stats.high_score = self.stats.score
             self.prep_high_score()
-            self.stats._save_high_score() # Сохраняем новый рекорд
+            self.stats._save_high_score()  # Сохраняем новый рекорд
 
     def show_score(self):
         """Выводит текущий счет, рекорд и число оставшихся кораблей"""
@@ -206,5 +227,6 @@ class Scoreboard():
         if hasattr(self, 'ships_items_for_draw') and self.ships_items_for_draw is not None and self.heart_icon:
             for item in self.ships_items_for_draw:
                 self.screen.blit(item['image'], item['rect'])
-        elif hasattr(self, 'ships'): # Используем старую систему с кораблями, если иконки нет или ships_items_for_draw is None
+        # Используем старую систему с кораблями, если иконки нет или ships_items_for_draw is None
+        elif hasattr(self, 'ships'):
             self.ships.draw(self.screen)

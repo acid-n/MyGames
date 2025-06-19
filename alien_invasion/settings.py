@@ -1,5 +1,6 @@
 import os
-import math # Импортируем модуль math для математических операций
+import math  # Импортируем модуль math для математических операций
+
 
 def lerp(start, end, t):
     """Линейная интерполяция."""
@@ -7,14 +8,15 @@ def lerp(start, end, t):
     t = max(0.0, min(1.0, t))
     return start + t * (end - start)
 
+
 _SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
 # Русский комментарий: Базовая директория для всех ассетов игры.
 _ASSETS_DIR = os.path.join(_SETTINGS_DIR, "..", "assets")
 # _IMAGES_DIR удален, так как он устарел и больше не будет использоваться.
-# TODO: Комментарий про _IMAGES_DIR был здесь, теперь удален.
+
 
 class Settings():
-    """Класс для хранения всех настроек игры Alien Invasion"""
+    """Класс для хранения всех настроек игры Alien Invasion."""  # Форматирование PEP8: добавлен пробел
 
     def __init__(self):
         """Инициализирует статические настройки игры"""
@@ -22,14 +24,15 @@ class Settings():
         # Это не новый путь к ресурсу, а удобная ссылка на уже определенную _ASSETS_DIR.
         # Используем self._ASSETS_DIR, чтобы избежать конфликта имен с глобальной _ASSETS_DIR, если такой будет.
         # Имя self._ASSETS_DIR выбрано для указания, что это "внутренний" путь настроек.
-        self._ASSETS_DIR = _ASSETS_DIR # Присваиваем глобально определенный путь переменной экземпляра
+        # Присваиваем глобально определенный путь переменной экземпляра
+        self._ASSETS_DIR = _ASSETS_DIR
 
         # Фактор максимального увеличения скорости пришельцев сверх линейной прогрессии
         # Используется для уровней 6 и выше
-        self.max_speed_factor = 2.0 # Максимальный множитель скорости
+        self.max_speed_factor = 2.0  # Максимальный множитель скорости
 
-        # Audio settings
-        self.audio_enabled = True # Global flag for enabling/disabling audio
+        # Настройки аудио
+        self.audio_enabled = True  # Глобальный флаг для включения/отключения звука
 
         # Параметры экрана
         self.screen_width = 1200
@@ -44,19 +47,22 @@ class Settings():
         self.bullet_speed = 1.5
         self.bullet_width = 3
         self.bullet_height = 15
-        self.bullet_color = (255, 0, 0) # Ярко-красный
-        self.bullets_allowed = 100      # Больше разрешенных снарядов
+        self.bullet_color = (255, 0, 0)  # Ярко-красный
+        self.bullets_allowed = 100       # Больше разрешенных снарядов
 
         # Настройки пришельцев
         # self.alien_speed = 1.0 # Заменено на alien_speed_current, min_alien_speed, max_alien_speed
-        self.min_alien_speed = 0.5  # Минимальная скорость пришельцев (начальная)
-        self.alien_speed_current = self.min_alien_speed # Текущая скорость пришельцев, изменяется динамически
-        self.alien_speed_max = 3.0      # Максимальная скорость пришельцев
-        self.target_score_for_max_speed = 50000 # Целевой счет для достижения максимальной скорости пришельцев
+        # Минимальная скорость пришельцев (начальная)
+        self.min_alien_speed = 0.5
+        # Текущая скорость пришельцев, изменяется динамически
+        self.alien_speed_current = self.min_alien_speed
+        self.alien_speed_max = 3.0       # Максимальная скорость пришельцев
+        # Целевой счет для достижения максимальной скорости пришельцев
+        self.target_score_for_max_speed = 50000
         self.fleet_drop_speed = 10
 
         # Темп ускорения игры
-        self.speedup_scale = 1.15 # Уменьшен для более плавной прогрессии
+        self.speedup_scale = 1.15  # Уменьшен для более плавной прогрессии
         # Темп роста стоимости пришельцев
         self.score_scale = 1.5
 
@@ -69,12 +75,14 @@ class Settings():
         self.fleet_top_margin_factor = 3.0
         self.alien_vertical_spacing_factor = 2.0
 
-        # Resource paths
-        self.ship_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'ships', 'player', 'playerShip3_blue.png') # Используем self._ASSETS_DIR
+        # Пути к ресурсам
+        self.ship_image_path = os.path.join(
+            # Используем self._ASSETS_DIR
+            self._ASSETS_DIR, 'gfx', 'ships', 'player', 'playerShip3_blue.png')
         # self.alien_image_path - теперь список alien_sprite_paths
-        # self.alien_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'fallback', 'alien.bmp') # Пример, если бы alien.bmp был бы здесь
+        # self.alien_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'fallback', 'alien.bmp') # Пример, если бы alien.bmp был бы здесь (удален)
 
-        # High score storage
+        # Хранение рекорда
         self.highscore_filepath = os.path.join(_SETTINGS_DIR, "highscore.json")
 
         # Scoreboard settings
@@ -83,35 +91,37 @@ class Settings():
         self.scoreboard_font_name = None
         self.score_padding_right = 20
         self.score_padding_top = 20
-        self.level_score_spacing = 10
+        self.level_score_spacing = 10  # Пространство между уровнем и счетом
         self.lives_display_padding_left = 10
         self.lives_display_padding_top = 10
 
-        # Button settings
-        self.play_button_text = "Play" # Note: This might be unused now menu buttons have specific texts
-        # self.button_width = 200 # Removed for dynamic sizing
-        # self.button_height = 50 # Removed for dynamic sizing
-        self.button_padding_x = 40  # Total horizontal padding (20px on each side)
-        self.button_padding_y = 20  # Total vertical padding (10px on each side)
+        # Настройки кнопок
+        # Примечание: Может не использоваться, т.к. кнопки меню имеют свои тексты
+        self.play_button_text = "Play"
+        # self.button_width = 200 # Удалено для динамического размера
+        # self.button_height = 50 # Удалено для динамического размера
+        # Общий горизонтальный отступ (по 20px с каждой стороны)
+        self.button_padding_x = 40
+        # Общий вертикальный отступ (по 10px с каждой стороны)
+        self.button_padding_y = 20
         self.button_color_default = (0, 255, 0)
         self.button_text_color_default = (255, 255, 255)
         self.button_font_size = 48
         self.button_font_name = None
 
-        # Menu settings
         # Настройки меню
-        # self.menu_new_game_button_text = "Новая игра" # Replaced by general localizable strings
-        # self.menu_exit_button_text = "Выход" # Replaced by general localizable strings
+        # self.menu_new_game_button_text = "Новая игра" # Заменено общими локализуемыми строками
+        # self.menu_exit_button_text = "Выход" # Заменено общими локализуемыми строками
 
-        # Localized UI Strings
+        # Локализуемые строки UI
         self.text_new_game_button = "Новая игра"
         self.text_exit_button = "Выход"
         self.text_resume_button = "Продолжить"
         self.text_restart_button = "Заново"
         self.text_main_menu_button = "Главное меню"
         self.text_pause_message = "Пауза"
-        # self.text_game_over_message = "Игра Окончена" # Not currently used, can be added if a specific screen is implemented
-        self.text_high_score_label = "Рекорд: " # For Scoreboard
+        # self.text_game_over_message = "Игра Окончена" # В настоящее время не используется, можно добавить при реализации соответствующего экрана
+        self.text_high_score_label = "Рекорд: "  # Для Scoreboard
 
         # Настройки бонусов
         # self.powerup_general_spawn_chance = 0.1 # Удалено: Теперь рассчитывается для каждого уровня
@@ -120,12 +130,13 @@ class Settings():
         self.shield_duration = 5000  # миллисекунды (5 секунд)
         # self.shield_spawn_chance = 0.1 # Удалено: Теперь рассчитывается для каждого уровня
         # Визуальные свойства бонуса "Щит"
-        self.shield_powerup_color = (0, 0, 255)  # Синий
+        self.shield_powerup_color = (0, 0, 255)   # Синий
         self.shield_powerup_width = 15
         self.shield_powerup_height = 15
         # self.shield_powerup_speed = 0.4 # Удалено: Скорость теперь динамическая
         # Визуальный эффект щита корабля
-        self.ship_shield_outline_color = (0, 191, 255)  # Ярко-голубой (Deep sky blue)
+        self.ship_shield_outline_color = (
+            0, 191, 255)  # Ярко-голубой (Deep sky blue)
 
         # Бонус "Двойной выстрел"
         self.double_fire_duration = 10000  # мс (10 секунд)
@@ -139,25 +150,34 @@ class Settings():
 
         # Настройки уровней теперь полностью динамические.
         # Список self.level_settings удален, так как параметры уровней рассчитываются функциями.
-        self.current_level_number = 1 # Уровень по умолчанию - 1
+        self.current_level_number = 1  # Уровень по умолчанию - 1
 
         # Дополнительные ряды пришельцев для высоких уровней
-        self.additional_alien_rows = 0 # Инициализация значения по умолчанию
+        self.additional_alien_rows = 0  # Инициализация значения по умолчанию
 
-        # Русский комментарий: Пути к звуковым эффектам
-        self.sound_laser_path = os.path.join(self._ASSETS_DIR, "audio", "sfx", "laser", "laser01.ogg")
-        self.sound_powerup_path = os.path.join(self._ASSETS_DIR, "audio", "sfx", "powerup", "powerup01.ogg")
-        self.sound_shield_recharge_path = os.path.join(self._ASSETS_DIR, "audio", "sfx", "shield", "shield_recharge.ogg")
-        # Русский комментарий: Паттерн для звуков взрыва, используйте .format(i) для подстановки номера
-        self.sound_explosion_pattern = os.path.join(self._ASSETS_DIR, "audio", "sfx", "explosion", "explosion0{}.ogg")
+        # Пути к звуковым эффектам
+        self.sound_laser_path = os.path.join(
+            self._ASSETS_DIR, "audio", "sfx", "laser", "laser01.ogg")
+        self.sound_powerup_path = os.path.join(
+            self._ASSETS_DIR, "audio", "sfx", "powerup", "powerup01.ogg")
+        self.sound_shield_recharge_path = os.path.join(
+            self._ASSETS_DIR, "audio", "sfx", "shield", "shield_recharge.ogg")
+        # Паттерн для звуков взрыва, используйте .format(i) для подстановки номера
+        self.sound_explosion_pattern = os.path.join(
+            self._ASSETS_DIR, "audio", "sfx", "explosion", "explosion0{}.ogg")
 
-        # Русский комментарий: Пути к UI ассетам
-        self.ui_heart_icon_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "icons", "heart.png")
-        self.ui_score_frame_bg_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "frames", "blue_panel.png")
-        self.ui_pause_icon_path = os.path.join(self._ASSETS_DIR, "gfx", "ui", "icons", "pause.png") # Добавлено для иконки паузы
+        # Пути к UI ассетам
+        self.ui_heart_icon_path = os.path.join(
+            self._ASSETS_DIR, "gfx", "ui", "icons", "heart.png")
+        self.ui_score_frame_bg_path = os.path.join(
+            self._ASSETS_DIR, "gfx", "ui", "frames", "blue_panel.png")
+        self.ui_pause_icon_path = os.path.join(
+            self._ASSETS_DIR, "gfx", "ui", "icons", "pause.png")  # Добавлено для иконки паузы
 
-        # Русский комментарий: Путь к фоновой музыке
-        self.music_background_path = os.path.join(self._ASSETS_DIR, "audio", "music", "outer_space_loop.ogg") # Добавлено для фоновой музыки
+        # Путь к фоновой музыке
+        self.music_background_path = os.path.join(
+            # Добавлено для фоновой музыки
+            self._ASSETS_DIR, "audio", "music", "outer_space_loop.ogg")
 
         self.initialize_dynamic_settings(self.current_level_number)
 
@@ -174,10 +194,12 @@ class Settings():
             # Старая логика для уровней 1-5
             # Скорость пришельцев: базовая + прирост за уровень, с ограничением сверху
             base_speed = 0.3  # Начальная скорость на уровне 1
-            speed_step_per_level = base_speed * 0.03 # Прирост 3% от базовой скорости за каждый уровень после первого
+            # Прирост 3% от базовой скорости за каждый уровень после первого
+            speed_step_per_level = base_speed * 0.03
             # Рассчитанная скорость для текущего уровня
-            current_speed = base_speed + (level_number - 1) * speed_step_per_level
-            max_speed_cap_old_logic = 1.5 # Максимальная скорость пришельцев по старой логике
+            current_speed = base_speed + \
+                (level_number - 1) * speed_step_per_level
+            max_speed_cap_old_logic = 1.5  # Максимальная скорость пришельцев по старой логике
             # Возвращаем минимальное значение между рассчитанной скоростью и старым капом (1.5),
             # но также не превышая глобальный максимум self.alien_speed_max
             return min(current_speed, max_speed_cap_old_logic, self.alien_speed_max)
@@ -186,13 +208,15 @@ class Settings():
             # Рассчитываем скорость для уровня 5 по старой формуле как базовую
             level_5_base_speed = 0.3  # Базовая скорость на уровне 1
             level_5_speed_step = level_5_base_speed * 0.03
-            level_5_speed = level_5_base_speed + (5 - 1) * level_5_speed_step # Скорость на уровне 5: 0.3 + 4 * 0.009 = 0.336
+            # Скорость на уровне 5: 0.3 + 4 * 0.009 = 0.336
+            level_5_speed = level_5_base_speed + (5 - 1) * level_5_speed_step
 
             # Рассчитываем множитель скорости, который увеличивается каждые 5 уровней
             # math.floor((level_number - 1) / 5) определяет, сколько раз по 5 уровней пройдено
             # Например, для уровней 6-10 это будет 1, для 11-15 это будет 2, и т.д.
             # Множитель увеличивается на 0.05 за каждый такой шаг (например, 1.05, 1.10, ...)
-            speed_multiplier = min(1 + 0.05 * math.floor((level_number - 1) / 5), self.max_speed_factor)
+            speed_multiplier = min(
+                1 + 0.05 * math.floor((level_number - 1) / 5), self.max_speed_factor)
 
             # Рассчитываем новую скорость путем умножения скорости 5-го уровня на множитель
             calculated_speed = level_5_speed * speed_multiplier
@@ -207,15 +231,18 @@ class Settings():
         # и множитель для уровней 6 и выше, ограниченный self.max_speed_factor.
         # Скорость также ограничена глобальным максимумом max_drop_speed_cap.
 
-        max_drop_speed_cap = 20.0 # Максимальная скорость снижения флота (глобальный кап)
+        # Максимальная скорость снижения флота (глобальный кап)
+        max_drop_speed_cap = 20.0
 
         if level_number < 6:
             # Старая логика для уровней 1-5
             # Скорость снижения флота: базовая + прирост за уровень, с ограничением сверху
             base_drop_speed = 8.0  # Начальная скорость снижения на уровне 1
-            drop_speed_step_per_level = base_drop_speed * 0.025 # Прирост 2.5% от базовой скорости за каждый уровень
+            # Прирост 2.5% от базовой скорости за каждый уровень
+            drop_speed_step_per_level = base_drop_speed * 0.025
             # Рассчитанная скорость для текущего уровня
-            current_drop_speed = base_drop_speed + (level_number - 1) * drop_speed_step_per_level
+            current_drop_speed = base_drop_speed + \
+                (level_number - 1) * drop_speed_step_per_level
             # Возвращаем минимальное значение между рассчитанной скоростью и глобальным капом
             return min(current_drop_speed, max_drop_speed_cap)
         else:
@@ -223,10 +250,12 @@ class Settings():
             # Рассчитываем скорость снижения для уровня 5 по старой формуле как базовую
             level_5_base_drop_speed = 8.0
             level_5_drop_step = level_5_base_drop_speed * 0.025
-            level_5_drop_speed = level_5_base_drop_speed + (5 - 1) * level_5_drop_step # Скорость на уровне 5: 8.0 + 4 * 0.2 = 8.8
+            level_5_drop_speed = level_5_base_drop_speed + \
+                (5 - 1) * level_5_drop_step  # Скорость на уровне 5: 8.0 + 4 * 0.2 = 8.8
 
             # Рассчитываем множитель скорости, аналогично скорости пришельцев
-            speed_multiplier = min(1 + 0.05 * math.floor((level_number - 1) / 5), self.max_speed_factor)
+            speed_multiplier = min(
+                1 + 0.05 * math.floor((level_number - 1) / 5), self.max_speed_factor)
 
             # Рассчитываем новую скорость снижения
             calculated_drop_speed = level_5_drop_speed * speed_multiplier
@@ -244,7 +273,8 @@ class Settings():
         factor_step_per_level = 0.01
 
         # Рассчитанный фактор для текущего уровня
-        current_factor = base_aliens_per_row_factor + (level_number - 1) * factor_step_per_level
+        current_factor = base_aliens_per_row_factor + \
+            (level_number - 1) * factor_step_per_level
 
         # Максимальный фактор, чтобы избежать слишком плотного размещения или отрицательных отступов
         max_factor_cap = 1.1
@@ -266,7 +296,8 @@ class Settings():
         factor_step_per_level = 0.0075
 
         # Рассчитанный фактор для текущего (или эффективного) уровня
-        current_factor = base_alien_rows_factor + (effective_level_for_factor - 1) * factor_step_per_level
+        current_factor = base_alien_rows_factor + \
+            (effective_level_for_factor - 1) * factor_step_per_level
 
         # Максимальный фактор, чтобы пришельцы не занимали весь экран и оставалось место для маневра
         max_factor_cap = 0.9
@@ -290,22 +321,22 @@ class Settings():
         if level_number == 1:
             return 0.0  # Шанс 0 на уровне 1
         elif level_number >= 2:
-            return 0.15 # Шанс 15% на уровнях 2 и выше
-        else: # Для level_number < 1 (например, 0 или отрицательные)
+            return 0.15  # Шанс 15% на уровнях 2 и выше
+        else:  # Для level_number < 1 (например, 0 или отрицательные)
             return 0.0
 
     def calculate_double_fire_spawn_chance(self, level_number):
         # Расчет шанса появления бонуса "Двойной выстрел"
-        if level_number <= 2: # Уровни 1-2
+        if level_number <= 2:  # Уровни 1-2
             return 0.0  # Шанс 0 на уровнях 1 и 2
-        elif level_number >= 3: # Уровни 3 и выше
-            return 0.12 # Шанс 12% на уровнях 3 и выше
-        else: # Для level_number < 1 (например, 0 или отрицательные), хотя это покрывается level_number <= 2
+        elif level_number >= 3:  # Уровни 3 и выше
+            return 0.12  # Шанс 12% на уровнях 3 и выше
+        else:  # Для level_number < 1 (например, 0 или отрицательные), хотя это покрывается level_number <= 2
             return 0.0
 
     def calculate_double_fire_min_cooldown(self, level_number):
         # Расчет минимального времени перезарядки для бонуса "Двойной выстрел"
-        if level_number < 1: # Базовая проверка для предотвращения ошибок с level_number = 0 или отрицательным
+        if level_number < 1:  # Базовая проверка для предотвращения ошибок с level_number = 0 или отрицательным
             level_number = 1
         # Уровень 1: 60000мс (60с), Уровень 30: 10000мс (10с).
         # Минимальная перезарядка теперь 15000мс (15с).
@@ -313,22 +344,22 @@ class Settings():
         # (level_number - 1) нормализует начало диапазона уровней к 0.
         # (29.0) это диапазон изменения (30 - 1).
         val = lerp(60000.0, 10000.0, (level_number - 1) / 29.0)
-        return max(val, 15000.0) # Перезарядка не может быть меньше 15000 мс
+        return max(val, 15000.0)  # Перезарядка не может быть меньше 15000 мс
 
     def calculate_shield_min_cooldown(self, level_number):
         # Расчет минимального времени перезарядки для бонуса "Щит"
-        if level_number < 1: # Базовая проверка
+        if level_number < 1:  # Базовая проверка
             level_number = 1
         # Параметры lerp аналогичны "Двойному выстрелу" для консистентности.
         # Уровень 1: 60000мс (60с), Уровень 30: 10000мс (10с).
         # Минимальная перезарядка 15000мс (15с).
         # Время перезарядки уменьшается с ростом уровня.
         val = lerp(60000.0, 10000.0, (level_number - 1) / 29.0)
-        return max(val, 15000.0) # Перезарядка не может быть меньше 15000 мс
+        return max(val, 15000.0)  # Перезарядка не может быть меньше 15000 мс
 
     def calculate_powerup_general_min_level_time(self, level_number):
         # Расчет минимального времени на уровне для появления любого бонуса
-        if level_number < 1: # Базовая проверка
+        if level_number < 1:  # Базовая проверка
             level_number = 1
         # Уровень 1: 10000мс (10с), Уровень 10: 3000мс (3с), Мин. время: 2000мс (2с)
         # Минимальное время, которое должно пройти на уровне перед тем, как может появиться бонус.
@@ -336,39 +367,53 @@ class Settings():
         # (level_number - 1) нормализует начало диапазона уровней к 0.
         # (9.0) это диапазон изменения (10 - 1).
         val = lerp(10000.0, 3000.0, (level_number - 1) / 9.0)
-        return max(val, 2000.0) # Не меньше минимального установленного времени
+        # Не меньше минимального установленного времени
+        return max(val, 2000.0)
 
     def get_current_level_settings(self, level_number):
         """Возвращает словарь настроек для указанного уровня, вычисляя их динамически."""
-        settings = {} # Инициализация пустого словаря для настроек
+        settings = {}  # Инициализация пустого словаря для настроек
 
         # Рассчитываем основные параметры сложности на основе номера уровня
-        settings['min_alien_speed'] = self.calculate_alien_speed(level_number) # Скорость пришельцев
-        settings['fleet_drop_speed'] = self.calculate_fleet_drop_speed(level_number) # Скорость снижения флота
-        settings['aliens_per_row_factor'] = self.calculate_aliens_per_row_factor(level_number) # Фактор пришельцев в ряду
-        settings['alien_rows_factor'] = self.calculate_alien_rows_factor(level_number) # Фактор рядов пришельцев
-        settings['alien_points'] = self.calculate_alien_points(level_number) # Очки за пришельца
+        settings['min_alien_speed'] = self.calculate_alien_speed(
+            level_number)  # Скорость пришельцев
+        settings['fleet_drop_speed'] = self.calculate_fleet_drop_speed(
+            level_number)  # Скорость снижения флота
+        settings['aliens_per_row_factor'] = self.calculate_aliens_per_row_factor(
+            level_number)  # Фактор пришельцев в ряду
+        settings['alien_rows_factor'] = self.calculate_alien_rows_factor(
+            level_number)  # Фактор рядов пришельцев
+        settings['alien_points'] = self.calculate_alien_points(
+            level_number)  # Очки за пришельца
 
         # alien_speed_increase_rate и alien_speed_max_level - эти параметры больше не используются
         # в контексте прогрессии между уровнями, так как скорость теперь полностью определяется
-        # уровнем через calculate_alien_speed. Они могут быть нужны для DDA внутри одного уровня,
-        # но это выходит за рамки текущей задачи. Оставим их пока для обратной совместимости
-        # или будущих доработок, но установим в значения, не влияющие на текущую логику.
-        settings['alien_speed_increase_rate'] = 0.0 # Прирост скорости внутри уровня (для DDA, пока не используется)
-        settings['alien_speed_max_level'] = settings['min_alien_speed'] # Макс. скорость на уровне (для DDA, привязана к базовой)
+        # уровнем через calculate_alien_speed. Они могут быть нужны для DDA (Dynamic Difficulty Adjustment)
+        # внутри одного уровня, но это выходит за рамки текущей задачи.
+        # Оставим их пока для обратной совместимости или будущих доработок,
+        # но установим в значения, не влияющие на текущую логику меж-уровневой прогрессии.
+        # Прирост скорости внутри уровня (для DDA, пока не используется)
+        settings['alien_speed_increase_rate'] = 0.0
+        # Макс. скорость на уровне (для DDA, привязана к базовой)
+        settings['alien_speed_max_level'] = settings['min_alien_speed']
 
         # Динамически рассчитываемые настройки бонусов
-        settings['shield_spawn_chance'] = self.calculate_shield_spawn_chance(level_number) # Шанс появления щита
-        settings['shield_min_cooldown'] = self.calculate_shield_min_cooldown(level_number) # Перезарядка щита
-        settings['double_fire_spawn_chance'] = self.calculate_double_fire_spawn_chance(level_number) # Шанс двойного выстрела
-        settings['double_fire_min_cooldown'] = self.calculate_double_fire_min_cooldown(level_number) # Перезарядка двойного выстрела
-        settings['powerup_general_min_level_time'] = self.calculate_powerup_general_min_level_time(level_number) # Мин. время для бонуса
+        settings['shield_spawn_chance'] = self.calculate_shield_spawn_chance(
+            level_number)  # Шанс появления щита
+        settings['shield_min_cooldown'] = self.calculate_shield_min_cooldown(
+            level_number)  # Перезарядка щита
+        settings['double_fire_spawn_chance'] = self.calculate_double_fire_spawn_chance(
+            level_number)  # Шанс двойного выстрела
+        settings['double_fire_min_cooldown'] = self.calculate_double_fire_min_cooldown(
+            level_number)  # Перезарядка двойного выстрела
+        settings['powerup_general_min_level_time'] = self.calculate_powerup_general_min_level_time(
+            level_number)  # Мин. время для бонуса
 
-        return settings # Возвращаем словарь с рассчитанными настройками
+        return settings  # Возвращаем словарь с рассчитанными настройками
 
     def initialize_dynamic_settings(self, level_number):
         """Инициализирует настройки, изменяющиеся в ходе игры, на основе текущего уровня."""
-        self.current_level_number = level_number # Сохраняем номер текущего уровня
+        self.current_level_number = level_number  # Сохраняем номер текущего уровня
         # Получаем конфигурацию для текущего уровня с помощью динамических расчетов
         level_config = self.get_current_level_settings(level_number)
 
@@ -379,13 +424,19 @@ class Settings():
         self.bullet_speed = 1.5
 
         # Настройки пришельцев из данных уровня, полученных из level_config
-        self.min_alien_speed = level_config['min_alien_speed'] # Минимальная/начальная скорость пришельцев для уровня
-        self.alien_speed_current = self.min_alien_speed # Текущая скорость пришельцев (может меняться в течении уровня DDA)
-        self.alien_speed_increase_rate = level_config['alien_speed_increase_rate'] # Коэффициент увеличения скорости (для DDA)
-        self.alien_speed_max_level = level_config['alien_speed_max_level'] # Максимальная скорость на данном уровне (для DDA)
+        # Минимальная/начальная скорость пришельцев для уровня
+        self.min_alien_speed = level_config['min_alien_speed']
+        # Текущая скорость пришельцев (может меняться в течении уровня DDA)
+        self.alien_speed_current = self.min_alien_speed
+        # Коэффициент увеличения скорости (для DDA)
+        self.alien_speed_increase_rate = level_config['alien_speed_increase_rate']
+        # Максимальная скорость на данном уровне (для DDA)
+        self.alien_speed_max_level = level_config['alien_speed_max_level']
 
-        self.fleet_drop_speed = level_config['fleet_drop_speed'] # Скорость снижения флота для уровня
-        self.alien_points = level_config['alien_points'] # Очки за пришельца для уровня
+        # Скорость снижения флота для уровня
+        self.fleet_drop_speed = level_config['fleet_drop_speed']
+        # Очки за пришельца для уровня
+        self.alien_points = level_config['alien_points']
 
         # Факторы для расчета количества пришельцев, применяемые в create_fleet()
         self.current_aliens_per_row_factor = level_config['aliens_per_row_factor']
@@ -400,7 +451,7 @@ class Settings():
             self.additional_alien_rows = math.floor((level_number - 1) / 5)
         else:
             self.additional_alien_rows = 0
-        # print(f"Level {level_number}: Additional alien rows set to {self.additional_alien_rows}") # Для отладки
+        # print(f"Level {level_number}: Additional alien rows set to {self.additional_alien_rows}") # Отладочный вывод количества доп. рядов
 
         # Настройки бонусов, загруженные для текущего уровня
         self.current_shield_spawn_chance = level_config['shield_spawn_chance']
@@ -410,15 +461,18 @@ class Settings():
         self.current_powerup_general_min_level_time = level_config['powerup_general_min_level_time']
 
         # Расчет скорости падения бонусов
-        base_fall_speed_ratio = 0.50 # Базовая скорость падения бонуса (50% от минимальной скорости пришельцев на данном уровне)
+        # Базовая скорость падения бонуса (50% от минимальной скорости пришельцев на данном уровне)
+        base_fall_speed_ratio = 0.50
         base_powerup_speed = self.min_alien_speed * base_fall_speed_ratio
 
-        powerup_speed_multiplier = 1.0 # Множитель скорости падения для уровней 6+
+        powerup_speed_multiplier = 1.0  # Множитель скорости падения для уровней 6+
         if level_number >= 6:
             # Множитель увеличивается на 0.05 за каждые 5 уровней (аналогично скорости пришельцев)
-            powerup_speed_multiplier = 1 + 0.05 * math.floor((level_number - 1) / 5)
+            powerup_speed_multiplier = 1 + 0.05 * \
+                math.floor((level_number - 1) / 5)
             # Ограничение множителя скорости падения (аналогично пришельцам, используем тот же self.max_speed_factor)
-            powerup_speed_multiplier = min(powerup_speed_multiplier, self.max_speed_factor)
+            powerup_speed_multiplier = min(
+                powerup_speed_multiplier, self.max_speed_factor)
 
         # Итоговая скорость падения бонуса
         final_powerup_speed = base_powerup_speed * powerup_speed_multiplier
@@ -435,53 +489,67 @@ class Settings():
         # Направление сбрасывается на каждом уровне или при инициализации.
         self.fleet_direction = 1
 
-        # Русский комментарий: Пути к спрайтам пришельцев
+        # Пути к спрайтам пришельцев
         self.alien_sprite_paths = []
-        base_alien_gfx_path = os.path.join(self._ASSETS_DIR, 'gfx', 'ships', 'aliens') # Используем self._ASSETS_DIR
-        for i in range(1, 25): # Загружаем все 24 спрайта alien_ship_01.png ... alien_ship_24.png
-            path = os.path.join(base_alien_gfx_path, f"alien_ship_{i:02d}.png") # Например, alien_ship_01.png
+        base_alien_gfx_path = os.path.join(
+            self._ASSETS_DIR, 'gfx', 'ships', 'aliens')  # Используем self._ASSETS_DIR
+        for i in range(1, 25):  # Загружаем все 24 спрайта alien_ship_01.png ... alien_ship_24.png
+            # Например, alien_ship_01.png
+            path = os.path.join(base_alien_gfx_path, f"alien_ship_{i:02d}.png")
             if os.path.exists(path):
                 self.alien_sprite_paths.append(path)
             else:
-                print(f"WARNING: Asset not found: Alien sprite not found - {path}")
+                # Русский комментарий: Предупреждение о ненайденном спрайте пришельца.
+                print(
+                    f"ПРЕДУПРЕЖДЕНИЕ: Ассет не найден: спрайт пришельца - {path}")
 
         if not self.alien_sprite_paths:
-            print("CRITICAL ERROR: No alien sprites loaded. Using fallback 'alien_ship_01.png'.")
+            # Русский комментарий: Критическая ошибка, если не загружено ни одного спрайта пришельца.
+            print("КРИТИЧЕСКАЯ ОШИБКА: Спрайты пришельцев не загружены. Используется fallback 'alien_ship_01.png'.")
             # Fallback на один из стандартных PNG спрайтов пришельцев.
             # Это гарантирует, что всегда будет хотя бы один спрайт, и он будет в новом формате.
-            fallback_alien_path = os.path.join(self._ASSETS_DIR, 'gfx', 'ships', 'aliens', 'alien_ship_01.png')
+            fallback_alien_path = os.path.join(
+                self._ASSETS_DIR, 'gfx', 'ships', 'aliens', 'alien_ship_01.png')
             if os.path.exists(fallback_alien_path):
                 self.alien_sprite_paths.append(fallback_alien_path)
             else:
                 # Этот else маловероятен, если структура ассетов корректна, но для полноты:
-                print(f"CRITICAL ERROR: Fallback alien sprite '{fallback_alien_path}' also not found.")
+                # Русский комментарий: Критическая ошибка, если fallback спрайт также не найден.
+                print(
+                    f"КРИТИЧЕСКАЯ ОШИБКА: Fallback спрайт пришельца '{fallback_alien_path}' также не найден.")
                 # В качестве самого крайнего случая можно было бы добавить сюда создание Surface,
                 # но это усложнит Settings, лучше убедиться в наличии ассетов.
 
-        self.current_alien_image_path = None # Будет устанавливаться в Alien.__init__
+        self.current_alien_image_path = None  # Будет устанавливаться в Alien.__init__
 
-        # Русский комментарий: Пути к спрайтам планет и галактик
+        # Пути к спрайтам планет и галактик
         self.planet_sprite_paths = []
-        base_planet_gfx_path = os.path.join(self._ASSETS_DIR, 'gfx', 'planets') # Используем self._ASSETS_DIR
+        base_planet_gfx_path = os.path.join(
+            self._ASSETS_DIR, 'gfx', 'planets')  # Используем self._ASSETS_DIR
         # Предположим, что файлы называются planet01.png, planet02.png, galaxy01.png и т.д.
         # Пользователю нужно будет обеспечить наличие этих файлов.
         # Пример нескольких файлов:
-        planet_files = ["planet01.png", "planet02.png", "planet03.png", "galaxy01.png", "galaxy02.png"]
+        planet_files = ["planet01.png", "planet02.png",
+                        "planet03.png", "galaxy01.png", "galaxy02.png"]
         for p_file in planet_files:
             path = os.path.join(base_planet_gfx_path, p_file)
             if os.path.exists(path):
                 self.planet_sprite_paths.append(path)
             else:
-                print(f"WARNING: Asset not found: Planet/Galaxy sprite not found - {path}")
+                # Русский комментарий: Предупреждение о ненайденном спрайте планеты/галактики.
+                print(
+                    f"ПРЕДУПРЕЖДЕНИЕ: Ассет не найден: спрайт планеты/галактики - {path}")
 
         if not self.planet_sprite_paths:
-            print("INFO: No planet/galaxy sprites loaded.")
+            # Русский комментарий: Информация об отсутствии загруженных спрайтов планет/галактик.
+            print("ИНФОРМАЦИЯ: Спрайты планет/галактик не загружены.")
             # Можно добавить дефолтный, если это критично, но для фоновых объектов это может быть не обязательно.
 
     def load_level_settings(self, new_level_number):
         """Загружает настройки для нового уровня, используя динамические расчеты."""
-        # print(f"Loading settings for level {new_level_number}") # Старый лог на английском
-        print(f"Загрузка настроек для уровня {new_level_number}") # Лог на русском
+        # print(f"Loading settings for level {new_level_number}") # Старый лог на английском, заменен на русский ниже
+        # Лог на русском
+        print(f"Загрузка настроек для уровня {new_level_number}")
         self.initialize_dynamic_settings(new_level_number)
 
     def increase_speed(self):
@@ -489,12 +557,13 @@ class Settings():
            Скорость пришельцев и очки теперь управляются через load_level_settings (динамически)."""
         self.ship_speed *= self.speedup_scale
         self.bullet_speed *= self.speedup_scale
-        # self.min_alien_speed и self.alien_points больше не масштабируются здесь
+        # self.min_alien_speed и self.alien_points больше не масштабируются здесь (управляются уровнем)
 
         # Логирование изменения скорости
-        print(f"--- Ship/Bullet Speed Increased (Global Scale) ---")
-        print(f"New ship speed: {self.ship_speed:.2f}")
-        print(f"New bullet speed: {self.bullet_speed:.2f}")
-        # print(f"New min alien speed for next level: {self.min_alien_speed:.2f}") # Это больше не актуально здесь
-        # print(f"New alien points: {self.alien_points}") # Это также не актуально здесь
+        # Русский комментарий: Лог об увеличении скорости корабля и пуль.
+        print(f"--- Скорость корабля/пуль увеличена (глобальный масштаб) ---")
+        print(f"Новая скорость корабля: {self.ship_speed:.2f}")
+        print(f"Новая скорость пуль: {self.bullet_speed:.2f}")
+        # print(f"New min alien speed for next level: {self.min_alien_speed:.2f}") # Больше не актуально здесь
+        # print(f"New alien points: {self.alien_points}") # Также не актуально здесь
         print(f"-----------------------")
