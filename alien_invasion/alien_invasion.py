@@ -2,8 +2,9 @@ import sys
 from time import sleep
 
 import pygame
-import pygame.mixer # Added import
-import os # Added import
+import pygame.mixer  # Добавлен импорт для звука
+# Добавлен импорт для работы с путями (например, для SDL_AUDIODRIVER)
+import os
 
 from alien_invasion.settings import Settings
 from alien_invasion.game_stats import GameStats
@@ -13,10 +14,12 @@ from alien_invasion.ship import Ship
 from alien_invasion.bullet import Bullet
 from alien_invasion.alien import Alien
 from alien_invasion.powerup import PowerUp
-from alien_invasion.starfield import Starfield # Импорт класса Starfield
-from alien_invasion.space_object import SpaceObject # Added import
+from alien_invasion.starfield import Starfield  # Импорт класса Starfield
+from alien_invasion.space_object import SpaceObject  # Added import
 import random
-import math # Импортируем math для floor, ceil, или других функций, если понадобятся.
+# Импортируем math для floor, ceil, или других функций, если понадобятся.
+import math
+
 
 class AlienInvasion:
     """Класс для управления ресурсами и поведением игры"""
@@ -28,29 +31,34 @@ class AlienInvasion:
     STATE_GAME_OVER = 'game_over'
 
     def __init__(self):
-        """Инициализирует игру и создает игровые ресурсы"""
+        """Инициализирует игру и создает игровые ресурсы."""  # Форматирование PEP8
         pygame.init()
 
-        # Check for extended image support (PNG)
+        # Проверка поддержки расширенных изображений (PNG)
         if not pygame.image.get_extended():
-            print("ERROR: Pygame was not built with extended image support (e.g., for PNG loading). Please check Pygame installation.")
-            sys.exit("Pygame lacks PNG support. Make sure SDL_image is installed with PNG support.")
+            # Русский комментарий: Ошибка, если Pygame собран без поддержки PNG.
+            print("ОШИБКА: Pygame собран без поддержки расширенных изображений (например, для загрузки PNG). Проверьте установку Pygame.")
+            sys.exit(
+                "Pygame не поддерживает PNG. Убедитесь, что SDL_image установлен с поддержкой PNG.")
 
         self.settings = Settings()
 
-        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
+        self.screen = pygame.display.set_mode(
+            (self.settings.screen_width, self.settings.screen_height))
         pygame.display.set_caption("Alien Invasion")
 
         # Создание экземпляра звездного поля
-        self.starfield = Starfield(self.screen, self.settings.screen_width, self.settings.screen_height)
+        self.starfield = Starfield(
+            self.screen, self.settings.screen_width, self.settings.screen_height)
 
         # Создание экземпляра для хранения игровой статистики
         self.stats = GameStats(self)
         self.sb = Scoreboard(self)
 
-        self.game_state = self.STATE_MENU # Начальное состояние игры - Меню
+        self.game_state = self.STATE_MENU  # Начальное состояние игры - Меню
 
-        self.ship = Ship(self) # Корабль создается, но будет использоваться/рисоваться только в STATE_PLAYING
+        # Корабль создается, но будет использоваться/рисоваться только в STATE_PLAYING
+        self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
 
@@ -59,68 +67,86 @@ class AlienInvasion:
         self.exit_button = Button(self, self.settings.text_exit_button)
 
         # Позиционирование кнопок меню
-        # Position "New Game" button centered on the screen
+        # Расположение кнопки "Новая игра" по центру экрана
         self.new_game_button.rect.center = self.screen.get_rect().center
 
-        # Position "Exit" button centered horizontally, and below "New Game" button with a 20px gap
+        # Расположение кнопки "Выход" по центру горизонтали, под кнопкой "Новая игра" с отступом 20px
         self.exit_button.rect.centerx = self.screen.get_rect().centerx
         self.exit_button.rect.top = self.new_game_button.rect.bottom + 20
 
-        # Pause Menu Buttons
+        # Кнопки меню паузы
         self.resume_button = Button(self, self.settings.text_resume_button)
-        self.restart_button_paused = Button(self, self.settings.text_restart_button)
-        self.main_menu_button = Button(self, self.settings.text_main_menu_button)
+        self.restart_button_paused = Button(
+            self, self.settings.text_restart_button)
+        self.main_menu_button = Button(
+            self, self.settings.text_main_menu_button)
 
-        # Position Resume button (e.g., centered)
+        # Расположение кнопки "Продолжить" (например, по центру)
         self.resume_button.rect.centerx = self.screen.get_rect().centerx
-        self.resume_button.rect.centery = self.screen.get_rect().centery - self.resume_button.rect.height
+        self.resume_button.rect.centery = self.screen.get_rect().centery - \
+            self.resume_button.rect.height
 
-        # Position Restart button below Resume
+        # Расположение кнопки "Заново" (в меню паузы) под кнопкой "Продолжить"
         self.restart_button_paused.rect.centerx = self.screen.get_rect().centerx
-        self.restart_button_paused.rect.top = self.resume_button.rect.bottom + 10 # 10px gap
+        self.restart_button_paused.rect.top = self.resume_button.rect.bottom + 10  # Отступ 10px
 
-        # Position Main Menu button below Restart
+        # Расположение кнопки "Главное меню" под кнопкой "Заново" (в меню паузы)
         self.main_menu_button.rect.centerx = self.screen.get_rect().centerx
         self.main_menu_button.rect.top = self.restart_button_paused.rect.bottom + 10
 
-        # _create_fleet() будет вызываться в _start_new_game(), а не при инициализации
-        # self._create_fleet() # Убрано отсюда
+        # _create_fleet() будет вызываться в _start_new_game(), а не при инициализации игры.
+        # self._create_fleet() # Удалено отсюда, чтобы флот не создавался до начала новой игры.
 
         self.powerups = pygame.sprite.Group()
-        # self.last_double_fire_spawn_time = 0 # Удалено: Заменено системой "мешка с шариками"
-        # self.last_shield_spawn_time = 0 # Удалено: Заменено системой "мешка с шариками"
-        self.level_start_time = 0 # Время начала текущего уровня (в тиках) - может использоваться для других механик
+        # self.last_double_fire_spawn_time = 0 # Удалено: Заменено системой "мешка с шариками" для бонусов.
+        # self.last_shield_spawn_time = 0 # Удалено: Заменено системой "мешка с шариками" для бонусов.
+        # Время начала текущего уровня (в тиках pygame.time.get_ticks()).
+        self.level_start_time = 0
 
-        # Счетчики волны (могут быть полезны для других целей или статистики)
-        self.aliens_in_wave = 0 # Общее количество пришельцев в текущей волне
-        self.aliens_destroyed_current_wave = 0 # Количество уничтоженных пришельцев в текущей волне
-        # self.guaranteed_powerup_spawned_this_wave = False # Удалено: Заменено системой "мешка с шариками"
+        # Счетчики волны (могут быть полезны для отладки или специфических механик).
+        self.aliens_in_wave = 0  # Общее количество пришельцев в текущей волне.
+        # Количество уничтоженных пришельцев в текущей волне.
+        self.aliens_destroyed_current_wave = 0
+        # self.guaranteed_powerup_spawned_this_wave = False # Удалено: Заменено системой "мешка с шариками".
 
-        # --- Start of new audio initialization sequence ---
+        # --- Начало новой последовательности инициализации аудио ---
         self.sound_system_initialized = False
         try:
-            pygame.mixer.init() # Default parameters
+            pygame.mixer.init()  # Параметры по умолчанию
             self.sound_system_initialized = True
-            print("INFO: Pygame mixer initialized successfully with default settings.")
+            # Русский комментарий: Информация об успешной инициализации микшера.
+            print(
+                "ИНФОРМАЦИЯ: Микшер Pygame успешно инициализирован с настройками по умолчанию.")
         except pygame.error as e_mixer_default:
-            print(f"WARNING: Default pygame.mixer.init() failed: {e_mixer_default}")
-            print("INFO: Attempting to initialize mixer with SDL_AUDIODRIVER=dummy ...")
+            # Русский комментарий: Предупреждение о неудачной инициализации микшера по умолчанию.
+            print(
+                f"ПРЕДУПРЕЖДЕНИЕ: Инициализация pygame.mixer.init() по умолчанию не удалась: {e_mixer_default}")
+            print("ИНФОРМАЦИЯ: Попытка инициализации микшера с SDL_AUDIODRIVER=dummy ...")
+            # Установка переменной окружения для "пустого" аудиодрайвера
             os.environ['SDL_AUDIODRIVER'] = 'dummy'
             try:
                 pygame.mixer.init()
-                self.sound_system_initialized = True # Still true, but it's a dummy driver
-                print("INFO: Pygame mixer initialized successfully with SDL_AUDIODRIVER=dummy. Game will have no sound.")
-                self.settings.audio_enabled = False # Update settings flag
+                # Система инициализирована, но это "пустой" драйвер
+                self.sound_system_initialized = True
+                # Русский комментарий: Информация об инициализации с dummy драйвером.
+                print(
+                    "ИНФОРМАЦИЯ: Микшер Pygame успешно инициализирован с SDL_AUDIODRIVER=dummy. В игре не будет звука.")
+                self.settings.audio_enabled = False  # Обновляем флаг в настройках
             except pygame.error as e_mixer_dummy:
-                print(f"ERROR: pygame.mixer.init() with SDL_AUDIODRIVER=dummy also failed: {e_mixer_dummy}")
-                print("ERROR: Sound system could not be initialized. Game will run without audio.")
-                self.settings.audio_enabled = False # Update settings flag
+                # Русский комментарий: Ошибка инициализации даже с dummy драйвером.
+                print(
+                    f"ОШИБКА: pygame.mixer.init() с SDL_AUDIODRIVER=dummy также не удалась: {e_mixer_dummy}")
+                print(
+                    "ОШИБКА: Звуковая система не может быть инициализирована. Игра будет запущена без звука.")
+                self.settings.audio_enabled = False  # Обновляем флаг в настройках
 
         if not self.sound_system_initialized or not self.settings.audio_enabled:
-            print("WARNING: AUDIO SYSTEM IS DISABLED. GAME WILL HAVE NO SOUND EFFECTS OR MUSIC.")
-        # --- End of new audio initialization sequence ---
+            # Русский комментарий: Предупреждение об отключенной аудиосистеме.
+            print(
+                "ПРЕДУПРЕЖДЕНИЕ: АУДИОСИСТЕМА ОТКЛЮЧЕНА. В ИГРЕ НЕ БУДЕТ ЗВУКОВЫХ ЭФФЕКТОВ И МУЗЫКИ.")
+        # --- Конец новой последовательности инициализации аудио ---
 
-        # Загрузка звуковых эффектов
+        # Загрузка звуковых эффектов (только если аудиосистема включена)
         self.sound_laser = None
         self.sound_powerup = None
         self.sound_shield_recharge = None
@@ -133,76 +159,99 @@ class AlienInvasion:
                 if os.path.exists(sfx_laser_path):
                     self.sound_laser = pygame.mixer.Sound(sfx_laser_path)
                 else:
-                    print(f"WARNING: Asset loading failed: Sound file not found: {sfx_laser_path}")
+                    # Русский комментарий: Предупреждение о ненайденном файле звука.
+                    print(
+                        f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sfx_laser_path}")
 
-                # Русский комментарий: Путь к файлу звука подбора бонуса из настроек
+                # Путь к файлу звука подбора бонуса из настроек
                 sfx_powerup_path = self.settings.sound_powerup_path
                 if os.path.exists(sfx_powerup_path):
                     self.sound_powerup = pygame.mixer.Sound(sfx_powerup_path)
                 else:
-                    print(f"WARNING: Asset loading failed: Sound file not found: {sfx_powerup_path}")
+                    print(
+                        f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sfx_powerup_path}")
 
-                # Русский комментарий: Путь к файлу звука перезарядки щита из настроек
+                # Путь к файлу звука перезарядки щита из настроек
                 sfx_shield_path = self.settings.sound_shield_recharge_path
                 if os.path.exists(sfx_shield_path):
-                    self.sound_shield_recharge = pygame.mixer.Sound(sfx_shield_path)
+                    self.sound_shield_recharge = pygame.mixer.Sound(
+                        sfx_shield_path)
                 else:
-                    print(f"WARNING: Asset loading failed: Sound file not found: {sfx_shield_path}")
+                    print(
+                        f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sfx_shield_path}")
 
-                # Русский комментарий: Загрузка нескольких звуков взрыва с использованием паттерна из настроек
-                for i in range(1, 4): # Предполагаем имена explosion01.ogg, explosion02.ogg, explosion03.ogg
-                    # Русский комментарий: Формируем путь к звуку взрыва, используя паттерн из настроек
-                    sound_path = self.settings.sound_explosion_pattern.format(i)
+                # Загрузка нескольких звуков взрыва с использованием паттерна из настроек
+                # Предполагаем имена explosion01.ogg, explosion02.ogg, explosion03.ogg
+                for i in range(1, 4):
+                    # Формируем путь к звуку взрыва, используя паттерн из настроек
+                    sound_path = self.settings.sound_explosion_pattern.format(
+                        i)
                     if os.path.exists(sound_path):
-                        self.sounds_explosion.append(pygame.mixer.Sound(sound_path))
+                        self.sounds_explosion.append(
+                            pygame.mixer.Sound(sound_path))
                     else:
-                        print(f"WARNING: Asset loading failed: Sound file not found: {sound_path}")
+                        print(
+                            f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуковой файл не найден: {sound_path}")
                 if not self.sounds_explosion:
-                    print("WARNING: Asset loading failed: No explosion sounds loaded (files not found or pattern incorrect).")
+                    # Русский комментарий: Предупреждение, если звуки взрыва не загружены.
+                    print(
+                        "ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Звуки взрыва не загружены (файлы не найдены или паттерн некорректен).")
 
             except pygame.error as e:
-                print(f"WARNING: Asset loading failed: Error initializing/loading sound effects: {e}")
+                # Русский комментарий: Предупреждение об ошибке при загрузке звуковых эффектов.
+                print(
+                    f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Ошибка инициализации/загрузки звуковых эффектов: {e}")
 
-            # Русский комментарий: Загрузка и воспроизведение фоновой музыки (закомментировано)
+            # Загрузка и воспроизведение фоновой музыки
+            # TODO: Раскомментировать и протестировать загрузку музыки, если music_volume будет добавлено в Settings.
             # try:
             #     music_path = self.settings.music_background_path # Используем путь из настроек
             #     if os.path.exists(music_path):
             #         pygame.mixer.music.load(music_path)
-            #         pygame.mixer.music.set_volume(self.settings.music_volume) # Keep dynamic volume if set from settings
+            #         # pygame.mixer.music.set_volume(self.settings.music_volume) # Громкость музыки (0.0 до 1.0)
             #         pygame.mixer.music.play(-1)  # -1 для бесконечного цикла
             #     else:
-            #         print(f"WARNING: Asset loading failed: Background music file not found: {music_path}")
+            #         print(f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Файл фоновой музыки не найден: {music_path}")
             # except pygame.error as e:
-            #     print(f"WARNING: Asset loading failed: Error loading or playing background music {music_path}: {e}")
+            #     print(f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Ошибка загрузки или воспроизведения фоновой музыки {music_path}: {e}")
         else:
-            print("INFO: Sound loading skipped as audio system is disabled.")
+            # Русский комментарий: Информация о пропуске загрузки звуков.
+            print(
+                "ИНФОРМАЦИЯ: Загрузка звуков пропущена, так как аудиосистема отключена.")
 
-        # Загрузка UI иконок для меню и паузы
+        # Загрузка UI иконок (например, для кнопки паузы)
         self.pause_icon = None
         icon_size_ui = (32, 32)
 
         try:
             # Русский комментарий: Путь к иконке паузы из настроек.
-            pause_icon_path = self.settings.ui_pause_icon_path # Используем путь из настроек
+            pause_icon_path = self.settings.ui_pause_icon_path  # Используем путь из настроек
             if os.path.exists(pause_icon_path):
-                self.pause_icon = pygame.image.load(pause_icon_path).convert_alpha()
-                self.pause_icon = pygame.transform.scale(self.pause_icon, icon_size_ui)
+                self.pause_icon = pygame.image.load(
+                    pause_icon_path).convert_alpha()
+                self.pause_icon = pygame.transform.scale(
+                    self.pause_icon, icon_size_ui)
             else:
-                print(f"WARNING: Asset loading failed: UI Icon not found: {pause_icon_path}")
-            # Иконка gear.png (меню) пока не используется напрямую в кнопках, загрузка пропущена
+                # Русский комментарий: Предупреждение о ненайденной иконке UI.
+                print(
+                    f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Иконка UI не найдена: {pause_icon_path}")
+            # Иконка gear.png (для кнопки настроек/меню) пока не используется напрямую, загрузка пропущена.
         except pygame.error as e:
-            print(f"WARNING: Asset loading failed: Error loading UI icons for AlienInvasion: {e}")
+            # Русский комментарий: Предупреждение об ошибке загрузки UI иконок.
+            print(
+                f"ПРЕДУПРЕЖДЕНИЕ: Загрузка ассета не удалась: Ошибка загрузки UI иконок для AlienInvasion: {e}")
 
-        # Русский комментарий: Группа для процедурных космических объектов (планеты, галактики)
+        # Группа для процедурных космических объектов (планеты, галактики)
         self.space_objects = pygame.sprite.Group()
         self.last_space_object_spawn_time = pygame.time.get_ticks()
-        # Интервал спавна: 40 +/- 8 секунд (в миллисекундах)
-        self.space_object_spawn_interval_min = (40 - 8) * 1000
-        self.space_object_spawn_interval_max = (40 + 8) * 1000
-        self.current_spawn_interval = random.randint(self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
+        # Интервал появления космических объектов: 40 +/- 8 секунд (в миллисекундах)
+        self.space_object_spawn_interval_min = (40 - 8) * 1000  # 32 секунды
+        self.space_object_spawn_interval_max = (40 + 8) * 1000  # 48 секунд
+        self.current_spawn_interval = random.randint(
+            self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
 
     def run_game(self):
-        """Запуск основного цикла игры"""
+        """Запуск основного цикла игры."""  # Форматирование PEP8
         while True:
             self._check_events()
 
@@ -214,11 +263,14 @@ class AlienInvasion:
                 self.ship.update()
                 self._update_bullets()
 
-                # New DDA logic based on per-level increase rate and max speed
+                # Логика динамической сложности (DDA) внутри уровня: постепенное увеличение скорости пришельцев.
+                # Эта скорость (alien_speed_current) сбрасывается для каждого нового уровня в initialize_dynamic_settings.
                 if hasattr(self.settings, 'alien_speed_increase_rate') and hasattr(self.settings, 'alien_speed_max_level'):
                     if self.settings.alien_speed_current < self.settings.alien_speed_max_level:
                         self.settings.alien_speed_current += self.settings.alien_speed_increase_rate
-                        self.settings.alien_speed_current = min(self.settings.alien_speed_current, self.settings.alien_speed_max_level)
+                        # Ограничение текущей скорости максимальной скоростью для данного уровня (из alien_speed_max_level).
+                        self.settings.alien_speed_current = min(
+                            self.settings.alien_speed_current, self.settings.alien_speed_max_level)
 
                 self._update_aliens()
                 self.powerups.update()
@@ -244,25 +296,28 @@ class AlienInvasion:
                     # Если игра в процессе или на паузе, ESC теперь всегда ведет в главное меню
                     if self.game_state == self.STATE_PLAYING or self.game_state == self.STATE_PAUSED:
                         self.game_state = self.STATE_MENU
-                        pygame.mouse.set_visible(True) # Показываем мышь в меню
+                        # Показываем мышь в меню
+                        pygame.mouse.set_visible(True)
                     # Если в главном меню или на экране конца игры, ESC по-прежнему закрывает игру
                     elif self.game_state == self.STATE_MENU or self.game_state == self.STATE_GAME_OVER:
                         sys.exit()
-                elif event.key == pygame.K_p: # Simple Pause toggle (no menu)
+                elif event.key == pygame.K_p:  # Simple Pause toggle (no menu)
                     if self.game_state == self.STATE_PLAYING:
                         self.game_state = self.STATE_PAUSED
                         # No mouse visibility change for 'P' to keep it simple
                     elif self.game_state == self.STATE_PAUSED:
                         self.game_state = self.STATE_PLAYING
-                        # No mouse visibility change for 'P'
+                        # Видимость мыши не меняется при паузе через 'P' для простоты.
                 else:
-                    self._check_keydown_events(event) # Gameplay related key events
+                    # События клавиатуры, связанные с геймплеем
+                    self._check_keydown_events(event)
             elif event.type == pygame.KEYUP:
                 self._check_keyup_events(event)
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
                 if self.game_state == self.STATE_MENU or self.game_state == self.STATE_GAME_OVER:
-                    clicked_new_game = self.new_game_button.is_clicked(mouse_pos)
+                    clicked_new_game = self.new_game_button.is_clicked(
+                        mouse_pos)
                     clicked_exit = self.exit_button.is_clicked(mouse_pos)
 
                     if clicked_new_game:
@@ -271,44 +326,50 @@ class AlienInvasion:
                         sys.exit()
                 elif self.game_state == self.STATE_PAUSED:
                     clicked_resume = self.resume_button.is_clicked(mouse_pos)
-                    clicked_restart_paused = self.restart_button_paused.is_clicked(mouse_pos)
-                    clicked_main_menu = self.main_menu_button.is_clicked(mouse_pos)
+                    clicked_restart_paused = self.restart_button_paused.is_clicked(
+                        mouse_pos)
+                    clicked_main_menu = self.main_menu_button.is_clicked(
+                        mouse_pos)
 
                     if clicked_resume:
                         self.game_state = self.STATE_PLAYING
                         pygame.mouse.set_visible(False)
                     elif clicked_restart_paused:
-                        self._start_new_game() # This already sets state to PLAYING and hides mouse
+                        self._start_new_game()  # Этот метод уже устанавливает PLAYING и скрывает мышь
                     elif clicked_main_menu:
                         self.game_state = self.STATE_MENU
-                        pygame.mouse.set_visible(True) # Ensure mouse is visible for menu
+                        # Убедимся, что мышь видна в меню
+                        pygame.mouse.set_visible(True)
 
-            # Removed the separate state-specific event processing for K_p here, as it's integrated above.
-            # Menu state specific KEYDOWN events (e.g. navigating menu with keys) could go here or in _check_keydown_events
+            # Отдельная обработка событий для K_p была интегрирована выше.
+            # Специфичные для меню события KEYDOWN (например, навигация по меню клавишами)
+            # могут быть добавлены здесь или в _check_keydown_events.
             # if self.game_state == self.STATE_MENU:
-            #     pass # Example: self._check_menu_keydown(event)
+            #     pass # Пример: self._check_menu_keydown_events(event)
 
-    # def _check_play_button(self, mouse_pos): # Метод удален
-    #     """Запускает новую игру при нажатии кнопки Play"""
-    #     button_clicked = self.play_button.is_clicked(mouse_pos)
-    #     if button_clicked and not self.stats.game_active:
+    # def _check_play_button(self, mouse_pos): # Метод удален, т.к. кнопки теперь специфичны для состояний.
+    #     """Запускает новую игру при нажатии кнопки Play."""
+    #     button_clicked = self.play_button.is_clicked(mouse_pos) # play_button больше не является общей.
+    #     if button_clicked and (self.game_state == self.STATE_MENU or self.game_state == self.STATE_GAME_OVER):
     #         self._start_new_game()
 
     def _start_new_game(self):
         """Начинает новую игру."""
-        # Сборос игровой статистики
-        self.stats.reset_stats() # Reset stats first so self.stats.level is 1
-        self.settings.initialize_dynamic_settings(self.stats.level) # Load settings for level 1
+        # Сброс игровой статистики
+        self.stats.reset_stats()  # Сначала сбрасываем статистику, чтобы self.stats.level стал 1
+        self.settings.initialize_dynamic_settings(
+            self.stats.level)  # Загрузка настроек для уровня 1
+        # Флаг активности игры (может быть избыточен при наличии game_state)
         self.stats.game_active = True
-        self.game_state = self.STATE_PLAYING # Установка активного состояния игры
-        # self.last_double_fire_spawn_time = 0 # Удалено
-        # self.last_shield_spawn_time = 0 # Удалено
-        self.level_start_time = pygame.time.get_ticks() # Установка времени начала уровня
+        self.game_state = self.STATE_PLAYING  # Установка активного состояния игры
+        # self.last_double_fire_spawn_time = 0 # Удалено (система бонусов изменена)
+        # self.last_shield_spawn_time = 0 # Удалено (система бонусов изменена)
+        self.level_start_time = pygame.time.get_ticks()  # Установка времени начала уровня
 
         # Сброс счетчиков волны
         self.aliens_in_wave = 0
         self.aliens_destroyed_current_wave = 0
-        # self.guaranteed_powerup_spawned_this_wave = False # Удалено
+        # self.guaranteed_powerup_spawned_this_wave = False # Удалено (система бонусов изменена)
 
         self.sb.prep_score()
         self.sb.prep_level()
@@ -323,7 +384,7 @@ class AlienInvasion:
         # Очистка списков пришельцев и снарядов
         self.aliens.empty()
         self.bullets.empty()
-        self.powerups.empty() # Очищаем бонусы при новой игре/раунде
+        self.powerups.empty()  # Очищаем бонусы при новой игре/раунде
         # Создание нового флота и размещение корабля в центре
         self._create_fleet()
         self.ship.center_ship()
@@ -350,33 +411,37 @@ class AlienInvasion:
         """Создание нового снаряда (или двух) и включение его в группу bullets"""
         if self.ship.double_fire_active:
             # Режим "Двойной выстрел" активен
-            if len(self.bullets) <= self.settings.bullets_allowed - 2: # Убедимся, что есть место для двух снарядов
+            # Убедимся, что есть место для двух снарядов
+            if len(self.bullets) <= self.settings.bullets_allowed - 2:
                 bullet1 = Bullet(self)
                 bullet2 = Bullet(self)
 
                 # Смещаем снаряды относительно центра корабля
                 # Начальная позиция обоих снарядов - верхушка центра корабля.
                 # Затем смещаем rect.x для каждого. self.y в классе Bullet уже установлен корректно.
-                bullet1.rect.x -= 10 # Сместить влево
-                bullet2.rect.x += 10 # Сместить вправо
+                bullet1.rect.x -= 10  # Сместить влево
+                bullet2.rect.x += 10  # Сместить вправо
 
                 self.bullets.add(bullet1)
                 self.bullets.add(bullet2)
+                # Звук выстрела для двойного огня (можно сделать его уникальным)
+                if self.sound_system_initialized and self.settings.audio_enabled and self.sound_laser:
+                    self.sound_laser.play()  # TODO: Возможно, другой звук для двойного выстрела?
         else:
             # Обычный режим огня
             if len(self.bullets) < self.settings.bullets_allowed:
                 new_bullet = Bullet(self)
                 self.bullets.add(new_bullet)
-            # Русский комментарий: Воспроизведение звука выстрела
-            if self.sound_system_initialized and self.settings.audio_enabled and self.sound_laser:
-                self.sound_laser.play()
+                # Воспроизведение звука выстрела
+                if self.sound_system_initialized and self.settings.audio_enabled and self.sound_laser:
+                    self.sound_laser.play()
 
     def _update_bullets(self):
-        """Обновляет позиции снарядов и удаляет старые пули"""
-        # Update bullets positions
+        """Обновляет позиции снарядов и удаляет старые пули."""  # Форматирование PEP8
+        # Обновление позиций снарядов
         self.bullets.update()
 
-        # Уничтожение исчезнувших снарядов
+        # Уничтожение снарядов, вышедших за пределы экрана
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet)
@@ -387,31 +452,39 @@ class AlienInvasion:
         """Обработка коллизий снарядов с пришельцами"""
 
         # Проверка попаданий в пришельцев
-        # При обнаружении попадания удалить снаряд и пришельца
-        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
+        # При обнаружении попадания удалить снаряд и пришельца.
+        # True, True означает, что и пуля, и пришелец будут удалены.
+        collisions = pygame.sprite.groupcollide(
+            self.bullets, self.aliens, True, True)
 
         if collisions:
-            for aliens_collided_list in collisions.values(): # aliens_collided_list - список пришельцев, уничтоженных одной пулей
+            # collisions - это словарь, где ключ - пуля, значение - список столкнувшихся с ней пришельцев.
+            for aliens_collided_list in collisions.values():
+                # alien_hit - конкретный пришелец из списка столкнувшихся.
                 for alien_hit in aliens_collided_list:
-                    self.stats.score += self.settings.alien_points # Очки за пришельца
-                    self.aliens_destroyed_current_wave += 1 # Увеличиваем счетчик уничтоженных в волне
-                    # Русский комментарий: Воспроизведение случайного звука взрыва
-                    if self.sound_system_initialized and self.settings.audio_enabled and self.sounds_explosion: # Убедимся, что список звуков не пуст
+                    # Начисление очков за пришельца.
+                    self.stats.score += self.settings.alien_points
+                    # Увеличиваем счетчик уничтоженных в текущей волне.
+                    self.aliens_destroyed_current_wave += 1
+                    # Воспроизведение случайного звука взрыва.
+                    # Убедимся, что список звуков не пуст.
+                    if self.sound_system_initialized and self.settings.audio_enabled and self.sounds_explosion:
                         random.choice(self.sounds_explosion).play()
 
-                    # Русский комментарий: Новая логика выпадения бонусов.
-                    # Проверяем, был ли этому пришельцу назначен бонус.
+                    # Новая логика выпадения бонусов.
+                    # Проверяем, был ли этому пришельцу назначен бонус при создании флота.
                     if alien_hit.assigned_powerup_type:
                         powerup_type = alien_hit.assigned_powerup_type
-                        # Создаем бонус в центре уничтоженного пришельца
-                        new_powerup = PowerUp(self, powerup_type, alien_hit.rect.center)
+                        # Создаем бонус в центре уничтоженного пришельца.
+                        new_powerup = PowerUp(
+                            self, powerup_type, alien_hit.rect.center)
                         self.powerups.add(new_powerup)
-                        # Русский комментарий: Старая логика появления бонусов (гарантированного и вероятностного),
-                        # основанная на времени, кулдаунах и шансах, была удалена отсюда.
+                        # Старая логика появления бонусов (гарантированного и вероятностного),
+                        # основанная на времени, кулдаунах и шансах, была удалена.
                         # Теперь бонусы выпадают только если они были предварительно назначены пришельцу.
 
-            self.sb.prep_score()
-            self.sb.check_high_score()
+            self.sb.prep_score()  # Обновление отображения счета.
+            self.sb.check_high_score()  # Проверка и обновление рекорда.
 
         if not self.aliens:
             # Уничтожение существующих снарядов и создание нового флота
@@ -419,12 +492,13 @@ class AlienInvasion:
             self._create_fleet()
             self.settings.increase_speed()
 
-            # Увеличение уровня
+            # Увеличение уровня.
             self.stats.level += 1
             self.sb.prep_level()
-            # Load settings for the new level
+            # Загрузка настроек для нового уровня.
             self.settings.load_level_settings(self.stats.level)
-            self.level_start_time = pygame.time.get_ticks() # Сброс времени начала уровня
+            # Сброс времени начала нового уровня.
+            self.level_start_time = pygame.time.get_ticks()
 
     def _update_aliens(self):
         """
@@ -465,130 +539,149 @@ class AlienInvasion:
             # Уменьшение ships_left и обновление панели счета
             self.stats.ships_left -= 1
             self.sb.prep_ships()
-            # Сброс элементов раунда
+            # Сброс элементов раунда (очистка пришельцев, пуль, бонусов; создание нового флота; центрирование корабля).
             self._reset_round_elements()
-            # Пауза
+            # Пауза для возможности игроку сориентироваться.
             sleep(self.settings.ship_hit_pause_duration)
         else:
-            self.stats.game_active = False # Keep game_active in sync
+            # Синхронизация флага активности игры (хотя game_state важнее).
+            self.stats.game_active = False
+            # Установка состояния "Игра окончена".
             self.game_state = self.STATE_GAME_OVER
+            # Показ курсора мыши для взаимодействия с меню.
             pygame.mouse.set_visible(True)
 
     def _create_fleet(self):
         """Создание флота вторжения и сброс счетчиков для гарантированного бонуса."""
         # Создание пришельца и вычисление количества пришельцев в ряду
         # Интервал между соседними пришельцами равен ширине пришельца
-        alien = Alien(self) # Dummy alien for dimensions
+        alien = Alien(self)  # Dummy alien for dimensions
         alien_width, alien_height = alien.rect.size
 
         # Расчет количества пришельцев в ряду (по горизонтали)
         # Учитываем отступы по краям экрана и между пришельцами.
-        available_space_x = self.settings.screen_width - (self.settings.fleet_screen_margin_x_factor * alien_width)
-        # self.settings.alien_horizontal_spacing_factor включает и самого пришельца, и отступ
-        number_aliens_x_float = available_space_x / (self.settings.alien_horizontal_spacing_factor * alien_width)
+        available_space_x = self.settings.screen_width - \
+            (self.settings.fleet_screen_margin_x_factor * alien_width)
+        # self.settings.alien_horizontal_spacing_factor определяет, сколько "ширин пришельца" занимает один пришелец + его отступ.
+        number_aliens_x_float = available_space_x / \
+            (self.settings.alien_horizontal_spacing_factor * alien_width)
         # Применяем фактор текущего уровня для плотности пришельцев в ряду.
-        # Этот фактор может увеличивать количество пришельцев (если > 1) или уменьшать (если < 1).
-        # Однако, current_aliens_per_row_factor обычно используется для увеличения плотности,
-        # что означает, что он должен быть применен так, чтобы уменьшить эффективный размер
-        # пространства, занимаемого одним пришельцем, или увеличить количество помещающихся.
-        # Логика изначальная: initial_number_aliens_x * factor.
-        # Если factor = 1, то это базовое количество. Если factor > 1, то пришельцев больше.
-        # Это означает, что factor должен умножать базовое количество.
-        base_number_aliens_x = int(number_aliens_x_float) # Базовое количество без фактора плотности
-        number_aliens_x = int(base_number_aliens_x * self.settings.current_aliens_per_row_factor)
-        number_aliens_x = max(1, number_aliens_x) # Как минимум один пришелец в ряду
+        # current_aliens_per_row_factor (из Settings) влияет на количество пришельцев.
+        # Базовое количество без фактора плотности.
+        base_number_aliens_x = int(number_aliens_x_float)
+        number_aliens_x = int(base_number_aliens_x *
+                              self.settings.current_aliens_per_row_factor)
+        # Как минимум один пришелец в ряду.
+        number_aliens_x = max(1, number_aliens_x)
 
-        # Расчет количества рядов пришельцев (по вертикали) с учетом новых правил
+        # Расчет количества рядов пришельцев (по вертикали) с учетом новых правил.
         ship_height = self.ship.rect.height
-        # Русский комментарий: Рассчитываем доступное вертикальное пространство для пришельцев,
+        # Рассчитываем доступное вертикальное пространство для пришельцев,
         # оставляя буфер от корабля (например, 2 высоты пришельца).
         available_height_for_aliens = (self.settings.screen_height -
+                                       # Отступ сверху.
                                        (self.settings.fleet_top_margin_factor * alien_height) -
-                                       ship_height -
-                                       (2 * alien_height)) # Буфер в 2 высоты пришельца от корабля
+                                       ship_height -  # Высота корабля.
+                                       # Буфер в 2 высоты пришельца от корабля.
+                                       (2 * alien_height))
 
-        # Русский комментарий: Максимально возможное количество рядов, если бы они занимали все доступное пространство.
-        # self.settings.alien_vertical_spacing_factor включает высоту пришельца и отступ.
+        # Максимально возможное количество рядов, если бы они занимали все доступное пространство.
+        # self.settings.alien_vertical_spacing_factor определяет, сколько "высот пришельца" занимает один ряд + его отступ.
         if (self.settings.alien_vertical_spacing_factor * alien_height) > 0:
-            max_possible_rows = int(available_height_for_aliens / (self.settings.alien_vertical_spacing_factor * alien_height))
+            max_possible_rows = int(
+                available_height_for_aliens / (self.settings.alien_vertical_spacing_factor * alien_height))
         else:
-            max_possible_rows = 0 # Избегаем деления на ноль, если вертикальный отступ некорректен
-        max_possible_rows = max(0, max_possible_rows) # Убедимся, что не отрицательное
+            # Избегаем деления на ноль, если вертикальный отступ некорректен.
+            max_possible_rows = 0
+        # Убедимся, что не отрицательное.
+        max_possible_rows = max(0, max_possible_rows)
 
-        # Русский комментарий: Рассчитываем базовое количество рядов на основе фактора (который ограничен для уровней 6+).
-        # current_alien_rows_factor определяет, какую долю от max_possible_rows занимать.
-        base_number_rows = int(max_possible_rows * self.settings.current_alien_rows_factor)
+        # Рассчитываем базовое количество рядов на основе фактора (который ограничен для уровней 6+).
+        # current_alien_rows_factor (из Settings) определяет, какую долю от max_possible_rows занимать.
+        base_number_rows = int(max_possible_rows *
+                               self.settings.current_alien_rows_factor)
 
-        # Русский комментарий: Добавляем дополнительные ряды, определенные в settings для высоких уровней.
+        # Добавляем дополнительные ряды, определенные в settings для высоких уровней.
         final_number_rows = base_number_rows + self.settings.additional_alien_rows
 
-        # Русский комментарий: Ограничиваем итоговое количество рядов максимально возможным на экране
+        # Ограничиваем итоговое количество рядов максимально возможным на экране
         # и гарантируем хотя бы один ряд, если это возможно.
         final_number_rows = min(final_number_rows, max_possible_rows)
-        final_number_rows = max(1, final_number_rows) if max_possible_rows > 0 else 0
+        final_number_rows = max(
+            1, final_number_rows) if max_possible_rows > 0 else 0
 
-        # Создание флота вторжения
-        # Используем final_number_rows вместо старого number_rows
+        # Создание флота вторжения.
+        # Используем final_number_rows вместо старого number_rows.
         for row_number in range(final_number_rows):
             for alien_number in range(number_aliens_x):
-                self._create_alien(alien_number, row_number, alien_width, alien_height)
+                self._create_alien(alien_number, row_number,
+                                   alien_width, alien_height)
 
-        # Инициализация/сброс счетчиков волны (aliens_in_wave, aliens_destroyed_current_wave)
+        # Инициализация/сброс счетчиков волны.
         self.aliens_in_wave = len(self.aliens)
         self.aliens_destroyed_current_wave = 0
-        # self.guaranteed_powerup_spawned_this_wave = False # Удалено
+        # self.guaranteed_powerup_spawned_this_wave = False # Удалено (система бонусов изменена).
 
-        # Русский комментарий: Логика предварительного назначения бонусов (система "мешка с шариками").
+        # Логика предварительного назначения бонусов (система "мешка с шариками").
         # Эта система определяет, из каких пришельцев выпадут бонусы.
         enemy_count = len(self.aliens)
-        # Русский комментарий: Базовая доля пришельцев, из которых выпадут бонусы (например, 7%).
+        # Базовая доля пришельцев, из которых выпадут бонусы (например, 7%).
         # Эту долю можно вынести в self.settings, если потребуется гибкая настройка.
-        drop_rate = 0.07
-        # Русский комментарий: Количество бонусов, которое должно выпасть на уровне.
+        drop_rate = 0.07  # TODO: Перенести в Settings для настройки.
+        # Количество бонусов, которое должно выпасть на уровне.
         # Округляем до ближайшего большего целого, чтобы даже при малом количестве врагов был шанс на бонус.
         drops_per_level = math.ceil(enemy_count * drop_rate)
 
-        # Русский комментарий: Определяем, какие типы бонусов доступны на текущем уровне.
+        # Определяем, какие типы бонусов доступны на текущем уровне.
         available_powerup_types = []
-        if self.stats.level >= 2: # Щит доступен со 2-го уровня
+        if self.stats.level >= 2:  # Щит доступен со 2-го уровня.
             available_powerup_types.append('shield')
-        if self.stats.level >= 3: # Двойной выстрел доступен с 3-го уровня
+        if self.stats.level >= 3:  # Двойной выстрел доступен с 3-го уровня.
             available_powerup_types.append('double_fire')
-        # Сюда можно добавить другие типы бонусов и условия их появления
+        # Сюда можно добавить другие типы бонусов и условия их появления.
 
         if drops_per_level > 0 and available_powerup_types and enemy_count > 0:
-            # Русский комментарий: Убедимся, что не пытаемся назначить больше бонусов, чем есть пришельцев.
+            # Убедимся, что не пытаемся назначить больше бонусов, чем есть пришельцев.
             drops_to_assign = min(drops_per_level, enemy_count)
 
-            # Русский комментарий: Выбираем случайных пришельцев, из которых выпадут бонусы.
+            # Выбираем случайных пришельцев, из которых выпадут бонусы.
             # random.sample гарантирует, что каждый выбранный пришелец уникален.
             # Преобразуем self.aliens в список, так как random.sample требует последовательность.
             try:
-                aliens_for_powerups = random.sample(list(self.aliens), int(drops_to_assign))
+                # Убедимся, что drops_to_assign не отрицательное и является int
+                aliens_for_powerups = random.sample(
+                    list(self.aliens), int(max(0, drops_to_assign)))
             except ValueError:
-                # Это может произойти, если drops_to_assign > len(list(self.aliens)),
+                # Это может произойти, если int(max(0, drops_to_assign)) > len(list(self.aliens)),
                 # но min() выше должен это предотвращать. На всякий случай.
-                aliens_for_powerups = [] # В случае ошибки, бонусов не будет назначено
+                # В случае ошибки, бонусов не будет назначено.
+                aliens_for_powerups = []
 
-            # Русский комментарий: Назначаем каждому выбранному пришельцу случайный тип бонуса из доступных.
+            # Назначаем каждому выбранному пришельцу случайный тип бонуса из доступных.
             for alien_obj in aliens_for_powerups:
-                if available_powerup_types: # Дополнительная проверка на случай, если список пуст
-                    chosen_powerup_type = random.choice(available_powerup_types)
+                if available_powerup_types:  # Дополнительная проверка на случай, если список пуст.
+                    chosen_powerup_type = random.choice(
+                        available_powerup_types)
                     alien_obj.assigned_powerup_type = chosen_powerup_type
-                    # print(f"Assigned {chosen_powerup_type} to alien at {alien_obj.rect.topleft}") # Для отладки
+                    # print(f"DEBUG: Assigned {chosen_powerup_type} to alien at {alien_obj.rect.topleft}") # Для отладки
 
-    def _create_alien(self, alien_number, row_number, alien_width, alien_height, specific_image_path=None): # Accept alien_width, alien_height, and optional specific_image_path
-        """Создание пришельца и размещение его в ряду"""
-        alien = Alien(self, specific_image_path=specific_image_path) # Pass specific_image_path to Alien constructor
-        # alien_width, alien_height = alien.rect.size # Not needed if passed as args
-        alien.x = alien_width + self.settings.alien_horizontal_spacing_factor * alien_width * alien_number
+    def _create_alien(self, alien_number, row_number, alien_width, alien_height, specific_image_path=None):
+        """Создание пришельца и размещение его в ряду."""  # Добавлены alien_width, alien_height, specific_image_path в параметры.
+        alien = Alien(
+            # Передача specific_image_path конструктору Alien.
+            self, specific_image_path=specific_image_path)
+        # alien_width, alien_height теперь используются из аргументов, а не из alien.rect.size,
+        # чтобы избежать зависимости от конкретного спрайта пришельца по умолчанию при расчете позиций.
+        alien.x = alien_width + self.settings.alien_horizontal_spacing_factor * \
+            alien_width * alien_number
         alien.rect.x = alien.x
-        # Corrected y position calculation to use alien_height consistently
-        alien.rect.y = alien_height + self.settings.alien_vertical_spacing_factor * alien_height * row_number
+        # Исправленный расчет позиции Y с использованием переданной alien_height.
+        alien.rect.y = alien_height + \
+            self.settings.alien_vertical_spacing_factor * alien_height * row_number
         self.aliens.add(alien)
 
     def _check_fleet_edges(self):
-        """Реагирует на достижение пришельцем края экрана"""
+        """Реагирует на достижение пришельцем края экрана."""  # Форматирование PEP8
         for alien in self.aliens.sprites():
             if alien.check_edges():
                 self._change_fleet_direction()
@@ -603,116 +696,140 @@ class AlienInvasion:
     def _update_screen(self):
         """Обновляет изображения на экране и отображает новый экран"""
         # self.screen.fill(self.settings.bg_color) # Заменено на фон из Starfield.draw()
-        # Отрисовка звездного поля (должна быть первой, чтобы быть на заднем плане)
+        # self.screen.fill(self.settings.bg_color) # Заменено на фон из Starfield.draw().
+        # Отрисовка звездного поля (должна быть первой, чтобы быть на заднем плане).
         self.starfield.draw()
+        # Отрисовка процедурных космических объектов (планеты, галактики).
         self.space_objects.draw(self.screen)
 
-        self.ship.blitme()
-        for bullet in self.bullets.sprites():
-            bullet.draw_bullet()
-        self.aliens.draw(self.screen)
-        self.powerups.draw(self.screen) # Отрисовка бонусов
+        # Отрисовка игровых объектов, если игра не в меню (пауза или игра).
+        if self.game_state != self.STATE_MENU:
+            self.ship.blitme()
+            for bullet in self.bullets.sprites():
+                bullet.draw_bullet()
+            self.aliens.draw(self.screen)
+            self.powerups.draw(self.screen)  # Отрисовка бонусов.
 
-        # Вывод информации о счете
-        self.sb.show_score()
+        # Вывод информации о счете (всегда видим, кроме, возможно, чистого меню без игры).
+        if self.game_state != self.STATE_MENU or self.stats.game_active:  # Показываем счет, если игра была начата
+            self.sb.show_score()
 
-        # Отображение элементов в зависимости от состояния игры
+        # Отображение элементов UI в зависимости от состояния игры.
         if self.game_state == self.STATE_GAME_OVER or self.game_state == self.STATE_MENU:
+            # В состоянии "Игра окончена" или "Меню" отображаем кнопки "Новая игра" и "Выход".
             self.new_game_button.draw_button()
             self.exit_button.draw_button()
         elif self.game_state == self.STATE_PAUSED:
-            # Используем шрифт и цвет из scoreboard для консистентности, или можно задать свои в settings
+            # В состоянии "Пауза" отображаем сообщение "Пауза" и кнопки меню паузы.
+            # Используем шрифт и цвет из scoreboard для консистентности, или можно задать свои в settings.
             temp_pause_image = self.sb.font.render(self.settings.text_pause_message, True,
                                                    self.settings.scoreboard_text_color,
-                                                   None) # None для прозрачного фона текста
+                                                   # None для прозрачного фона текста.
+                                                   None)
+            # Для лучшей производительности отрисовки.
             pause_image = temp_pause_image.convert_alpha()
             screen_rect = self.screen.get_rect()
-            # Position "Пауза" text above the buttons
-            text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - 20 # 20px above resume button
-            pause_rect = pause_image.get_rect(centerx=screen_rect.centerx, top=text_rect_y_offset)
+            # Располагаем текст "Пауза" над кнопками.
+            # 20px над кнопкой "Продолжить".
+            text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - 20
+            pause_rect = pause_image.get_rect(
+                centerx=screen_rect.centerx, top=text_rect_y_offset)
 
-            # Ensure the text is not positioned too high if buttons are very high.
-            # A simple check: if pause_rect.top is less than some margin, adjust it.
-            # For now, assuming buttons are reasonably placed.
-            # if pause_rect.top < 20: # Example margin
-            #    pause_rect.top = 20
+            # Проверка, чтобы текст не уехал слишком высоко, если кнопки расположены очень высоко.
+            if pause_rect.top < 20:  # Примерный отступ сверху.
+                pause_rect.top = 20
 
-            # Русский комментарий: Отрисовка иконки паузы, если она есть
+            # Отрисовка иконки паузы, если она есть.
             if self.pause_icon:
-                pause_icon_rect = self.pause_icon.get_rect(centerx=screen_rect.centerx)
-                # Позиционируем иконку над текстом "Пауза" или вместо него
-                pause_icon_rect.bottom = pause_rect.top - 10 # 10px над текстом
-                if pause_icon_rect.top < 20 : pause_icon_rect.top = 20 # Не слишком высоко
+                pause_icon_rect = self.pause_icon.get_rect(
+                    centerx=screen_rect.centerx)
+                # Позиционируем иконку над текстом "Пауза".
+                # 10px над текстом.
+                pause_icon_rect.bottom = pause_rect.top - 10
+                if pause_icon_rect.top < 20:
+                    pause_icon_rect.top = 20  # Не слишком высоко.
                 self.screen.blit(self.pause_icon, pause_icon_rect)
 
-            self.screen.blit(pause_image, pause_rect) # Отрисовка текста "Пауза"
+            # Отрисовка текста "Пауза".
+            self.screen.blit(pause_image, pause_rect)
 
-            # Draw Pause Menu Buttons
+            # Отрисовка кнопок меню паузы.
             self.resume_button.draw_button()
             self.restart_button_paused.draw_button()
             self.main_menu_button.draw_button()
             # Игровые элементы (корабль, пришельцы, пули, счет) уже отрисованы до этого блока,
-            # поэтому они останутся видимыми, но замороженными.
+            # поэтому они останутся видимыми на экране "Пауза", но "замороженными".
 
-        pygame.display.flip()
+        pygame.display.flip()  # Отображение последнего отрисованного экрана.
 
     def _check_ship_powerup_collisions(self):
         """Проверяет столкновения корабля с бонусами."""
-        # The True argument will remove the power-up sprite upon collision
-        collected_powerups = pygame.sprite.spritecollide(self.ship, self.powerups, True)
+        # Аргумент True удаляет спрайт бонуса из группы при столкновении.
+        collected_powerups = pygame.sprite.spritecollide(
+            self.ship, self.powerups, True)
         for powerup in collected_powerups:
             if powerup.powerup_type == 'shield':
                 self.ship.activate_shield()
-                # Русский комментарий: Воспроизведение звука активации щита
+                # Воспроизведение звука активации щита.
                 if self.sound_system_initialized and self.settings.audio_enabled and self.sound_shield_recharge:
                     self.sound_shield_recharge.play()
-            elif powerup.powerup_type == 'double_fire': # Обработка сбора бонуса "Двойной выстрел"
+            # Обработка сбора бонуса "Двойной выстрел".
+            elif powerup.powerup_type == 'double_fire':
                 self.ship.activate_double_fire()
-                # Русский комментарий: Воспроизведение звука подбора бонуса
+                # Воспроизведение звука подбора бонуса.
                 if self.sound_system_initialized and self.settings.audio_enabled and self.sound_powerup:
                     self.sound_powerup.play()
-            # Добавить elif для других типов бонусов, если они появятся позже
+            # Добавить elif для других типов бонусов, если они появятся позже.
 
     def _try_spawn_space_object(self):
-        # Русский комментарий: Пытается создать новый космический объект, если пришло время.
+        # Пытается создать новый процедурный космический объект (планету/галактику), если пришло время.
         current_time = pygame.time.get_ticks()
         if current_time - self.last_space_object_spawn_time > self.current_spawn_interval:
-            if self.settings.planet_sprite_paths: # Если есть доступные спрайты
+            # Если есть доступные спрайты планет/галактик.
+            if self.settings.planet_sprite_paths:
                 image_path = random.choice(self.settings.planet_sprite_paths)
 
                 new_object = SpaceObject(
                     screen_width=self.settings.screen_width,
                     screen_height=self.settings.screen_height,
                     image_path=image_path,
-                    # target_size_ratio_range, speed, fade_duration_ms - используются значения по умолчанию из SpaceObject
+                    # target_size_ratio_range, speed, fade_duration_ms - используются значения по умолчанию из SpaceObject.
                 )
                 self.space_objects.add(new_object)
-                # print(f"Spawned SpaceObject: {image_path}") # Для отладки
+                # print(f"DEBUG: Spawned SpaceObject: {image_path}") # Для отладки
 
                 self.last_space_object_spawn_time = current_time
-                self.current_spawn_interval = random.randint(self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
+                # Установка нового случайного интервала для следующего объекта.
+                self.current_spawn_interval = random.randint(
+                    self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
             # else:
-                # print("Нет доступных спрайтов для космических объектов.") # Для отладки
+                # print("DEBUG: Нет доступных спрайтов для космических объектов.") # Для отладки
+
 
 if __name__ == '__main__':
-    # Создание экземпляра и запуск игры
+    # Создание экземпляра и запуск игры.
     ai = AlienInvasion()
     ai.run_game()
 
+# --- Пример кода для профилирования (оставлен закомментированным для возможности использования) ---
 # import cProfile
 # import pstats
-# # ... (существующий код main() остается выше)
 #
-# if __name__ == '__main__':
-#     # --- Код для профилирования ---
-#     # profiler = cProfile.Profile()
-#     # profiler.enable()
-#
+# def main_profiled(): # Обертка для профилирования
 #     ai = AlienInvasion()
 #     ai.run_game()
 #
+# if __name__ == '__main__':
+#     # Для обычного запуска:
+#     # ai = AlienInvasion()
+#     # ai.run_game()
+#
+#     # Для запуска с профилированием:
+#     # profiler = cProfile.Profile()
+#     # profiler.enable()
+#     # main_profiled() # Запуск обернутой функции
 #     # profiler.disable()
-#     # stats = pstats.Stats(profiler).sort_stats('cumulative') # cumulative, time, calls
-#     # stats.print_stats(30) # Показать первые 30 строк
-#     # # stats.dump_stats('profile_results.prof') # Для сохранения в файл и просмотра в SnakeViz
-#     # --- Конец кода для профилирования ---
+#     # stats = pstats.Stats(profiler).sort_stats('cumulative') # Сортировка по совокупному времени
+#     # stats.print_stats(30) # Показать первые 30 строк результатов
+#     # # stats.dump_stats('profile_results.prof') # Сохранить результаты в файл для просмотра в SnakeViz или других инструментах
+# --- Конец примера кода для профилирования ---

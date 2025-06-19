@@ -1,6 +1,7 @@
 import pygame
 from pygame.sprite import Sprite
 
+
 class PowerUp(Sprite):
     """Класс для представления бонуса (power-up) в игре."""
 
@@ -10,7 +11,7 @@ class PowerUp(Sprite):
         self.screen = ai_game.screen
         self.screen_rect = self.screen.get_rect()
         self.settings = ai_game.settings
-        self.powerup_type = powerup_type # e.g., 'shield'
+        self.powerup_type = powerup_type  # e.g., 'shield'
 
         # Размеры и свойства бонуса в зависимости от типа
         if self.powerup_type == 'shield':
@@ -27,11 +28,12 @@ class PowerUp(Sprite):
             self.speed = self.settings.current_double_fire_powerup_speed
         else:
             # Тип бонуса неизвестен, используем значения по умолчанию или вызываем ошибку
-            print(f"Предупреждение: Неизвестный тип бонуса '{self.powerup_type}'. Используются стандартные визуальные свойства.")
-            self.width = 10 # Значение по умолчанию
-            self.height = 10 # Значение по умолчанию
-            self.color = (128, 128, 128) # Серый цвет по умолчанию
-            self.speed = 0.5 # Медленная скорость по умолчанию
+            print(
+                f"Предупреждение: Неизвестный тип бонуса '{self.powerup_type}'. Используются стандартные визуальные свойства.")
+            self.width = 10  # Значение по умолчанию
+            self.height = 10  # Значение по умолчанию
+            self.color = (128, 128, 128)  # Серый цвет по умолчанию
+            self.speed = 0.5  # Медленная скорость по умолчанию
 
         # Создание поверхности и rect для бонуса
         self.image = pygame.Surface((self.width, self.height))
@@ -51,7 +53,7 @@ class PowerUp(Sprite):
 
         # Удаление бонуса, если он вышел за нижний край экрана
         if self.rect.top > self.screen_rect.bottom:
-            self.kill() # Удаляет спрайт из всех групп, в которых он состоит
+            self.kill()  # Удаляет спрайт из всех групп, в которых он состоит
 
     # Метод draw(self, screen) не нужен, если self.image и self.rect
     # корректно установлены, так как pygame.sprite.Group.draw() сможет его отрисовать.
