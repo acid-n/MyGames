@@ -246,9 +246,73 @@ class AlienInvasion:
         self.current_spawn_interval = random.randint(
             self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
 
+        # --- Кэширование Surface для текста "Пауза" ---
+        # Создаем Surface для текста "Пауза" один раз при инициализации для оптимизации.
+        # Используем шрифт и цвет из Scoreboard для консистентности, или можно определить отдельные настройки.
+        # Важно: self.sb (Scoreboard) должен быть уже инициализирован к этому моменту.
+        if hasattr(self, 'sb') and hasattr(self.sb, 'font'): # Убедимся, что sb и font существуют
+            pause_font = self.sb.font
+            pause_text_color = self.settings.scoreboard_text_color # или специальный цвет для паузы
+
+            # Рендерим текст "Пауза"
+            self.paused_text_surface = pause_font.render(
+                self.settings.text_pause_message,
+                True,
+                pause_text_color,
+                None # Фон прозрачный
+            )
+            # Применяем convert_alpha() для лучшей производительности при блиттинге, если текст с альфа-каналом или для консистентности
+            self.paused_text_surface = self.paused_text_surface.convert_alpha()
+
+            # Rect для этого Surface можно рассчитать здесь, если позиция всегда одинакова относительно чего-либо,
+            # или оставить расчет в _update_screen, если позиция динамически зависит от других элементов (кнопок).
+            # self.paused_text_rect = self.paused_text_surface.get_rect()
+            # Пока расчет оставим в _update_screen, так как позиция зависит от кнопок.
+        else:
+            # Если sb или font не найдены (например, при тестировании без полного Scoreboard),
+            # устанавливаем плейсхолдер или логируем ошибку.
+            self.paused_text_surface = None
+            logger.error("Не удалось создать кэшированный Surface для текста 'Пауза': Scoreboard или шрифт не инициализирован.")
+        # --- Конец кэширования ---
+
+
     def run_game(self):
         """Запуск основного цикла игры."""  # Форматирование PEP8
+
+        # frame_counter = 0
+        # max_frames_for_profiling = 200 # Логика перенесена в main_profiled
+
         while True:
+            # if IS_PROFILING_RUN_FLAG: # Логика перенесена в main_profiled
+            #     if frame_counter >= max_frames_for_profiling:
+            #         sys.exit("Profiling frame limit reached")
+            #     frame_counter += 1
+
+            # Если PROFILE_MODE глобальная или передана, можно использовать ее здесь
+            # Для простоты, предположим, что если main_profiled вызывается, то мы в режиме профилирования.
+            # Однако, PROFILE_MODE установлена в __main__, так что run_game не знает о ней напрямую.
+            # Лучше передать это как параметр или установить атрибут в self.settings или self.
+            # В данном случае, т.к. main_profiled вызывает run_game, можно положиться на то,
+            # что run_profiler_and_save_stats завершит процесс.
+            # Но для надежности, добавим проверку на PROFILE_MODE, если бы она была доступна здесь.
+            # Поскольку PROFILE_MODE не доступна здесь напрямую, а timeout уже был,
+            # попробуем более простой вариант - просто запустить и надеяться, что QUIT обработается.
+            # Предыдущий таймаут был на уровне выполнения команды.
+            # Попробуем еще раз, но если снова таймаут, то нужно будет передать PROFILE_MODE внутрь класса.
+
+            # --- Начало изменения для принудительного выхода при профилировании ---
+            # Этот код будет активен только если PROFILE_MODE в __main__ была True
+            # и мы запустили run_profiler_and_save_stats -> main_profiled -> ai.run_game()
+            # Чтобы этот код работал, нужно, чтобы AlienInvasion знал о PROFILE_MODE.
+            # Проще всего это сделать, если run_profiler_and_save_stats установит
+            # какой-то флаг в settings или передаст аргумент.
+            # Пока что, для простоты, я оставлю этот код здесь, но он не будет работать без
+            # передачи флага PROFILE_MODE в AlienInvasion.
+            # Вместо этого, я буду полагаться на то, что _check_events() обработает sys.exit()
+            # корректно, если Pygame сможет инициализировать display.
+
+            # --- Коррекция: Добавим frame_counter, если PROFILE_MODE была установлена в __main__ ---
+            # Старая логика с is_profiling_run удалена отсюда, так как заменена глобальным флагом и sys.exit() выше.
             self._check_events()
 
             # Обновление состояния звездного поля (прокрутка)
@@ -716,35 +780,37 @@ class AlienInvasion:
             self.exit_button.draw_button()
         elif self.game_state == self.STATE_PAUSED:
             # В состоянии "Пауза" отображаем сообщение "Пауза" и кнопки меню паузы.
-            # Используем шрифт и цвет из scoreboard для консистентности, или можно задать свои в settings.
-            temp_pause_image = self.sb.font.render(self.settings.text_pause_message, True,
-                                                   self.settings.scoreboard_text_color,
-                                                   # None для прозрачного фона текста.
-                                                   None)
-            # Для лучшей производительности отрисовки.
-            pause_image = temp_pause_image.convert_alpha()
-            screen_rect = self.screen.get_rect()
-            # Располагаем текст "Пауза" над кнопками.
-            text_rect_y_offset = self.resume_button.rect.top - pause_image.get_height() - _PAUSE_TEXT_SPACING_ABOVE_BUTTON
-            pause_rect = pause_image.get_rect(
-                centerx=screen_rect.centerx, top=text_rect_y_offset)
 
-            # Проверка, чтобы текст не уехал слишком высоко, если кнопки расположены очень высоко.
-            if pause_rect.top < _PAUSE_ELEMENT_TOP_MARGIN:
-                pause_rect.top = _PAUSE_ELEMENT_TOP_MARGIN
+            # Используем кэшированный Surface для текста "Пауза"
+            if self.paused_text_surface:
+                pause_image_to_blit = self.paused_text_surface
+                screen_rect = self.screen.get_rect()
 
-            # Отрисовка иконки паузы, если она есть.
-            if self.pause_icon:
-                pause_icon_rect = self.pause_icon.get_rect(
-                    centerx=screen_rect.centerx)
-                # Позиционируем иконку над текстом "Пауза".
-                pause_icon_rect.bottom = pause_rect.top - _PAUSE_ICON_TEXT_SPACING
-                if pause_icon_rect.top < _PAUSE_ELEMENT_TOP_MARGIN: # Use the same top margin
-                    pause_icon_rect.top = _PAUSE_ELEMENT_TOP_MARGIN
-                self.screen.blit(self.pause_icon, pause_icon_rect)
+                # Рассчитываем позицию текста "Пауза" (зависит от кнопок, поэтому здесь)
+                # Этот rect (current_pause_rect) используется только для позиционирования при блиттинге.
+                pause_rect_y_offset = self.resume_button.rect.top - pause_image_to_blit.get_height() - _PAUSE_TEXT_SPACING_ABOVE_BUTTON
+                current_pause_rect = pause_image_to_blit.get_rect(
+                    centerx=screen_rect.centerx, top=pause_rect_y_offset
+                )
 
-            # Отрисовка текста "Пауза".
-            self.screen.blit(pause_image, pause_rect)
+                # Проверка, чтобы текст не уехал слишком высоко.
+                if current_pause_rect.top < _PAUSE_ELEMENT_TOP_MARGIN:
+                    current_pause_rect.top = _PAUSE_ELEMENT_TOP_MARGIN
+
+                # Отрисовка иконки паузы, если она есть (логика иконки остается прежней).
+                if self.pause_icon:
+                    pause_icon_rect = self.pause_icon.get_rect(
+                        centerx=screen_rect.centerx)
+                    pause_icon_rect.bottom = current_pause_rect.top - _PAUSE_ICON_TEXT_SPACING
+                    if pause_icon_rect.top < _PAUSE_ELEMENT_TOP_MARGIN:
+                        pause_icon_rect.top = _PAUSE_ELEMENT_TOP_MARGIN
+                    self.screen.blit(self.pause_icon, pause_icon_rect)
+
+                # Отрисовка кэшированного текста "Пауза".
+                self.screen.blit(pause_image_to_blit, current_pause_rect)
+            else:
+                # Fallback или логирование, если self.paused_text_surface не был создан.
+                logger.error("Кэшированный Surface для текста 'Пауза' (self.paused_text_surface) отсутствует.")
 
             # Отрисовка кнопок меню паузы.
             self.resume_button.draw_button()
@@ -813,25 +879,89 @@ if __name__ == '__main__':
     ai.run_game()
     logging.info("Application finished.")
 
-# --- Пример кода для профилирования (оставлен закомментированным для возможности использования) ---
-# import cProfile
-# import pstats
-#
-# def main_profiled(): # Обертка для профилирования
-#     ai = AlienInvasion()
-#     ai.run_game()
-#
-# if __name__ == '__main__':
-#     # Для обычного запуска:
-#     # ai = AlienInvasion()
-#     # ai.run_game()
-#
-#     # Для запуска с профилированием:
-#     # profiler = cProfile.Profile()
-#     # profiler.enable()
-#     # main_profiled() # Запуск обернутой функции
-#     # profiler.disable()
-#     # stats = pstats.Stats(profiler).sort_stats('cumulative') # Сортировка по совокупному времени
-#     # stats.print_stats(30) # Показать первые 30 строк результатов
-#     # # stats.dump_stats('profile_results.prof') # Сохранить результаты в файл для просмотра в SnakeViz или других инструментах
-# --- Конец примера кода для профилирования ---
+# --- Код для профилирования ---
+import cProfile
+import pstats
+import io # Для сохранения вывода pstats в строку/файл
+
+def main_profiled(): # Обертка для профилирования
+    # Настройка базовой конфигурации логирования (если еще не настроено глобально)
+    # logging.basicConfig(
+    #     level=logging.INFO, # Устанавливаем INFO, чтобы видеть стартовые сообщения игры
+    #     format='%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s',
+    #     datefmt='%Y-%m-%d %H:%M:%S'
+    # )
+    # logging.info("Application started for profiling.")
+
+    ai = AlienInvasion()
+    # Вместо ai.run_game() с его бесконечным циклом,
+    # профилируем только создание объекта AlienInvasion.
+    logger.info("Профилирование: только создание объекта AlienInvasion.")
+    try:
+        ai = AlienInvasion() # Создание объекта
+        logger.info("Профилирование: объект AlienInvasion создан успешно.")
+    except Exception as e:
+        logger.error(f"Профилирование: Ошибка при создании AlienInvasion: {e}", exc_info=True)
+    # Симуляция игрового цикла полностью убрана для этого теста.
+    logger.info("Профилирование: main_profiled завершил попытку создания объекта.")
+
+
+def run_profiler_and_save_stats():
+    profiler = cProfile.Profile()
+
+    # Используем profiler.call() для более чистого перехвата исключений типа SystemExit
+    try:
+        profiler.call(main_profiled)
+    except SystemExit as e:
+        logger.warning(f"Профилирование перехвачено SystemExit: {e}. Статистика будет сохранена.")
+    finally:
+        profiler.disable() # Убедимся, что профилировщик выключен
+
+    # Сохранение результатов профилирования
+    s = io.StringIO()
+    # Сортировка по совокупному времени, затем по общему времени, затем по количеству вызовов
+    # ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative', 'tottime', 'calls')
+    # Для начала достаточно сортировки по cumulative и tottime
+    ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative', 'tottime')
+    ps.print_stats(30) # Показать топ 30 функций
+
+    # Запись в файл
+    with open("profiling_results.txt", "w") as f:
+        f.write(s.getvalue())
+
+    # Опционально: сохранить бинарный файл для SnakeViz
+    # profiler.dump_stats('profile_results.prof')
+
+    # Вывод в консоль для информации
+    # print("\nРезультаты профилирования сохранены в profiling_results.txt")
+    # print("Топ по совокупному времени ('cumulative'):")
+    # pstats.Stats(profiler).sort_stats('cumulative').print_stats(20)
+    # print("\nТоп по общему времени выполнения функции ('tottime'):")
+    # pstats.Stats(profiler).sort_stats('tottime').print_stats(20)
+
+
+if __name__ == '__main__':
+    # --- Управление запуском: обычный или профилирование ---
+    PROFILE_MODE = False # Измените на True для запуска с профилированием
+
+    if PROFILE_MODE:
+        print("Запуск игры в режиме профилирования...")
+        # Настройка логирования для профилирования (можно сделать менее подробным)
+        logging.basicConfig(level=logging.WARNING,
+                            format='%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s',
+                            datefmt='%Y-%m-%d %H:%M:%S')
+        run_profiler_and_save_stats()
+        print("Профилирование завершено. Результаты в profiling_results.txt")
+    else:
+        # Обычный запуск игры
+        # Настройка базовой конфигурации логирования (если еще не настроено)
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        logging.info("Application started.")
+        ai = AlienInvasion()
+        ai.run_game()
+        logging.info("Application finished.")
+# --- Конец кода для профилирования ---

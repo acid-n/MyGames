@@ -308,6 +308,69 @@ class TestButtonCreation(unittest.TestCase):
         self.assertEqual(button.msg_image.width, expected_width)
         # Дополнительно можно проверить, что msg_image_rect обновился, но это уже детали реализации Button
 
+    def test_button_is_clicked_positive(self):
+        """Тест: button.is_clicked() возвращает True при клике внутри кнопки."""
+        # Создаем кнопку для этого теста, ее rect будет инициализирован в __init__
+        # msg_image_rect.center по умолчанию будет screen_rect.center
+        # rect кнопки (self.rect) по умолчанию равен msg_image_rect
+        button = alien_invasion.button.Button(self.mock_ai_game, "Test Button")
+
+        # Клик точно в центре кнопки
+        mouse_pos_center = button.rect.center
+        self.assertTrue(button.is_clicked(mouse_pos_center),
+                        "Клик в центре кнопки должен вернуть True.")
+
+        # Клик в одном из углов кнопки (например, левый верхний)
+        mouse_pos_topleft = button.rect.topleft
+        self.assertTrue(button.is_clicked(mouse_pos_topleft),
+                        "Клик в левом верхнем углу кнопки должен вернуть True.")
+
+    def test_button_is_clicked_negative_outside(self):
+        """Тест: button.is_clicked() возвращает False при клике снаружи кнопки."""
+        button = alien_invasion.button.Button(self.mock_ai_game, "Test Button")
+
+        # Клик слева от кнопки
+        mouse_pos_left_outside = (button.rect.left - 1, button.rect.centery)
+        self.assertFalse(button.is_clicked(mouse_pos_left_outside),
+                         "Клик слева от кнопки должен вернуть False.")
+
+        # Клик справа от кнопки
+        mouse_pos_right_outside = (button.rect.right + 1, button.rect.centery)
+        self.assertFalse(button.is_clicked(mouse_pos_right_outside),
+                         "Клик справа от кнопки должен вернуть False.")
+
+        # Клик над кнопкой
+        mouse_pos_above = (button.rect.centerx, button.rect.top - 1)
+        self.assertFalse(button.is_clicked(mouse_pos_above),
+                         "Клик над кнопкой должен вернуть False.")
+
+        # Клик под кнопкой
+        mouse_pos_below = (button.rect.centerx, button.rect.bottom + 1)
+        self.assertFalse(button.is_clicked(mouse_pos_below),
+                         "Клик под кнопкой должен вернуть False.")
+
+    def test_button_is_clicked_on_edge(self):
+        """Тест: button.is_clicked() возвращает True при клике на границе кнопки."""
+        button = alien_invasion.button.Button(self.mock_ai_game, "Test Button")
+
+        # Клик на правой границе (pygame.Rect.collidepoint включает границы)
+        mouse_pos_right_edge = (button.rect.right -1 , button.rect.centery) # -1 потому что right это "за" последним пикселем
+        # В реализации collidepoint(x,y): self.x <= x < self.x + self.width and self.y <= y < self.y + self.height
+        # Значит, x должен быть < right. То есть button.rect.right - 1 это последняя внутренняя координата.
+        self.assertTrue(button.is_clicked(mouse_pos_right_edge),
+                        f"Клик на правой границе ({mouse_pos_right_edge}) должен вернуть True. Rect: {button.rect}")
+
+        # Клик на нижней границе
+        mouse_pos_bottom_edge = (button.rect.centerx, button.rect.bottom - 1)
+        self.assertTrue(button.is_clicked(mouse_pos_bottom_edge),
+                        f"Клик на нижней границе ({mouse_pos_bottom_edge}) должен вернуть True. Rect: {button.rect}")
+
+        # Клик на левой верхней точке (уже покрыт в positive, но для явности)
+        mouse_pos_top_left_edge = button.rect.topleft
+        self.assertTrue(button.is_clicked(mouse_pos_top_left_edge),
+                        f"Клик на левой верхней границе ({mouse_pos_top_left_edge}) должен вернуть True. Rect: {button.rect}")
+
+
 # Cleaned up general mocks for TestShipLoading
 @mock.patch('pygame.mixer.init', lambda *args, **kwargs: None)
 @mock.patch('pygame.mixer.Sound', lambda *args, **kwargs: None)
