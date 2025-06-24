@@ -56,6 +56,8 @@ class Settings():
         self.bullets_allowed = 100       # Больше разрешенных снарядов
 
         # Настройки пришельцев
+        self.alien_display_width = 50 # Ширина пришельца для отображения
+        self.alien_display_height = 50 # Высота пришельца для отображения
         # self.alien_speed = 1.0 # Заменено на alien_speed_current, min_alien_speed, max_alien_speed
         # Минимальная скорость пришельцев (начальная)
         self.min_alien_speed = 0.5
@@ -129,15 +131,18 @@ class Settings():
         self.text_high_score_label = "Рекорд: "  # Для Scoreboard
 
         # Настройки бонусов
+        self.powerup_display_width = 30 # Ширина бонуса для отображения
+        self.powerup_display_height = 30 # Высота бонуса для отображения
         # self.powerup_general_spawn_chance = 0.1 # Удалено: Теперь рассчитывается для каждого уровня
 
         # Бонус "Щит"
         self.shield_duration = 5000  # миллисекунды (5 секунд)
+        self.powerup_shield_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'powerups', 'powerup_shield.png')
         # self.shield_spawn_chance = 0.1 # Удалено: Теперь рассчитывается для каждого уровня
-        # Визуальные свойства бонуса "Щит"
+        # Визуальные свойства бонуса "Щит" (используются как fallback)
         self.shield_powerup_color = (0, 0, 255)   # Синий
-        self.shield_powerup_width = 15
-        self.shield_powerup_height = 15
+        self.shield_powerup_width = self.powerup_display_width # Для fallback
+        self.shield_powerup_height = self.powerup_display_height # Для fallback
         # self.shield_powerup_speed = 0.4 # Удалено: Скорость теперь динамическая
         # Визуальный эффект щита корабля
         self.ship_shield_outline_color = (
@@ -145,13 +150,18 @@ class Settings():
 
         # Бонус "Двойной выстрел"
         self.double_fire_duration = 10000  # мс (10 секунд)
+        self.powerup_double_fire_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'powerups', 'powerup_bolt.png') # Используем bolt для double_fire
         # self.double_fire_spawn_chance = 0.05 # Удалено: Теперь рассчитывается для каждого уровня
         # self.double_fire_min_cooldown = 15000 # Удалено: Теперь рассчитывается для каждого уровня
-        # Визуальные свойства бонуса "Двойной выстрел"
+        # Визуальные свойства бонуса "Двойной выстрел" (используются как fallback)
         self.double_fire_powerup_color = (255, 165, 0)  # Оранжевый
-        self.double_fire_powerup_width = 15
-        self.double_fire_powerup_height = 15
+        self.double_fire_powerup_width = self.powerup_display_width # Для fallback
+        self.double_fire_powerup_height = self.powerup_display_height # Для fallback
         # self.double_fire_powerup_speed = 0.4 # Удалено: Скорость теперь динамическая
+
+        # Пример для другого типа бонуса, если он будет добавлен (например, 'star' или 'extra_life')
+        # self.powerup_star_image_path = os.path.join(self._ASSETS_DIR, 'gfx', 'powerups', 'powerup_star.png')
+
 
         # Настройки уровней теперь полностью динамические.
         # Список self.level_settings удален, так как параметры уровней рассчитываются функциями.

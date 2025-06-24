@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Constants for alien fallback visuals and tinting
-_FALLBACK_ALIEN_SIZE = (40, 40)
+# _FALLBACK_ALIEN_SIZE = (40, 40) # Заменено на использование alien_display_width/height из settings
 _FALLBACK_ALIEN_COLOR = (0, 255, 0) # Green
 _MIN_CHANNEL_CHOICE = 0 # For R, G, B selection
 _MAX_CHANNEL_CHOICE = 2
@@ -80,8 +80,15 @@ class Alien(Sprite):
                 raise pygame.error("No image path provided for alien sprite.")
         except pygame.error as e:
             logger.warning("Failed to load alien sprite: %s - %s. Using fallback.", self.image_path, e)
-            self.image = pygame.Surface(_FALLBACK_ALIEN_SIZE)  # Fallback: зеленый квадрат
+            # Используем размеры из настроек для fallback
+            fallback_size = (self.settings.alien_display_width, self.settings.alien_display_height)
+            self.image = pygame.Surface(fallback_size)
             self.image.fill(_FALLBACK_ALIEN_COLOR)
+
+        # Масштабирование спрайта пришельца
+        self.image = pygame.transform.scale(
+            self.image, (self.settings.alien_display_width, self.settings.alien_display_height)
+        )
 
         # Русский комментарий: Применяем случайный оттенок, если изображение загружено успешно
         # Проверка, что это не fallback Surface(1,1) или что-то подобное
@@ -113,11 +120,8 @@ class Alien(Sprite):
             logger.debug("Применяем оттенок %s к %s", chosen_tint_color, self.image_path if self.image_path else "N/A")
             self.image = _apply_tint(self.image, chosen_tint_color)
 
-        # Масштабирование спрайта пришельца (если нужно, например, до 50x50)
-        # self.image = pygame.transform.scale(self.image, (50, 50))
-        # Пока оставим оригинальный размер спрайта, т.к. они могут быть разными.
-        # Масштабирование лучше делать при загрузке, если все спрайты должны быть одного размера.
-        # Или передавать желаемый размер в конструктор.
+        # Масштабирование спрайта пришельца было перенесено выше, перед применением оттенка,
+        # чтобы оттенок применялся к уже масштабированному изображению.
 
         self.rect = self.image.get_rect()
 
