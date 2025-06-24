@@ -144,7 +144,7 @@ class SpaceObject(pygame.sprite.Sprite):
         # Пока оставим простое условие: если объект видим и начинает выходить за любую из границ.
         if self.state == 'visible':
             # Проверяем, если какая-либо часть объекта все еще на экране
-            on_screen_ horizontally = self.rect.right > 0 and self.rect.left < self.screen_width
+            on_screen_horizontally = self.rect.right > 0 and self.rect.left < self.screen_width
             on_screen_vertically = self.rect.bottom > 0 and self.rect.top < self.screen_height
 
             # Если объект уже не виден на экране (полностью вышел за любую из границ), начинаем fade_out
