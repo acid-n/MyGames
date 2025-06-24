@@ -35,8 +35,11 @@ class TestAssetScaling(unittest.TestCase):
             cls.ai_game_mock.settings.screen_width,
             cls.ai_game_mock.settings.screen_height
         ))
+        # Для тестов альфа-канала, нам нужны реальные пути к изображениям, если они существуют
+        # или мокать pygame.image.load так, чтобы оно возвращало Surface с альфа-флагом.
+        # Проще использовать реальные пути, если они доступны, и обрабатывать их отсутствие.
 
-
+    # --- Тесты на масштабирование ---
     @patch('pygame.image.load')
     def test_ship_scaling(self, mock_load_image):
         """Тестирует масштабирование корабля."""
@@ -181,6 +184,54 @@ class TestAssetScaling(unittest.TestCase):
 
             self.assertEqual(powerup.rect.width, self.ai_game_mock.settings.powerup_display_width)
             self.assertEqual(powerup.rect.height, self.ai_game_mock.settings.powerup_display_height)
+
+    # --- Тесты на альфа-канал ---
+
+    def test_ship_image_alpha_channel(self):
+        """Тест: Изображение корабля загружается с альфа-каналом."""
+        if not os.path.exists(self.ai_game_mock.settings.ship_image_path):
+            self.skipTest(f"Ассет корабля не найден: {self.ai_game_mock.settings.ship_image_path}")
+
+        # Создаем реальный объект Ship, чтобы проверить загрузку изображения
+        ship = Ship(self.ai_game_mock)
+        self.assertIsNotNone(ship.image, "Изображение корабля не должно быть None.")
+        # convert_alpha() должен установить флаг SRCALPHA
+        self.assertTrue(ship.image.get_flags() & pygame.SRCALPHA,
+                        "Изображение корабля должно иметь флаг SRCALPHA после convert_alpha().")
+
+    def test_alien_image_alpha_channel(self):
+        """Тест: Изображение пришельца загружается с альфа-каналом."""
+        if not self.ai_game_mock.settings.alien_sprite_paths:
+            self.skipTest("Список путей к спрайтам пришельцев пуст.")
+
+        alien_image_path = self.ai_game_mock.settings.alien_sprite_paths[0]
+        if not os.path.exists(alien_image_path):
+            self.skipTest(f"Ассет пришельца не найден: {alien_image_path}")
+
+        alien = Alien(self.ai_game_mock, specific_image_path=alien_image_path)
+        self.assertIsNotNone(alien.image, "Изображение пришельца не должно быть None.")
+        self.assertTrue(alien.image.get_flags() & pygame.SRCALPHA,
+                        "Изображение пришельца должно иметь флаг SRCALPHA после convert_alpha().")
+
+    def test_powerup_image_alpha_channel(self):
+        """Тест: Изображение бонуса загружается с альфа-каналом."""
+        # Тестируем для типа 'shield'
+        powerup_image_path = self.ai_game_mock.settings.powerup_shield_image_path
+        if not os.path.exists(powerup_image_path):
+            self.skipTest(f"Ассет бонуса 'shield' не найден: {powerup_image_path}")
+
+        powerup = PowerUp(self.ai_game_mock, 'shield', (100,100))
+        self.assertIsNotNone(powerup.image, "Изображение бонуса не должно быть None.")
+
+        # Если изображение было загружено (не fallback), оно должно иметь альфа-канал
+        # Fallback Surface создается без SRCALPHA по умолчанию, если не указать pygame.SRCALPHA при создании.
+        # В коде PowerUp fallback создается как `pygame.Surface(target_size)`, что не добавляет SRCALPHA.
+        # Это ожидаемое поведение для fallback. Тест проверяет именно загруженное изображение.
+        # Мы можем проверить, что это не fallback, сравнив с цветом fallback, но это сложнее.
+        # Проще проверить флаг, если мы уверены, что файл существует и загрузился.
+        # (Данный тест предполагает, что файл существует и был успешно загружен, иначе skipTest).
+        self.assertTrue(powerup.image.get_flags() & pygame.SRCALPHA,
+                        "Загруженное изображение бонуса должно иметь флаг SRCALPHA.")
 
 
     @classmethod

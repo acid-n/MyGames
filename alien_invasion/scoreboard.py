@@ -7,8 +7,9 @@ from alien_invasion.ship import Ship
 
 # Constants for Scoreboard layout and appearance
 _UI_ICON_SIZE = (32, 32)  # Standard size for UI icons like hearts, stars
-_SCORE_FRAME_PADDING = 15 # Padding inside the score frame to the text
-_LIVES_ICON_TEXT_SPACING = 5 # Space between lives heart icon and 'xN' text
+_SCORE_FRAME_PADDING = 15  # Padding inside the score frame to the text
+# _LIVES_ICON_TEXT_SPACING = 5 # Space between lives heart icon and 'xN' text - Удалено, так как текст xN не используется
+_LIVES_ICON_SPACING = 5  # Пространство между иконками жизней
 
 logger = logging.getLogger(__name__)
 
@@ -73,42 +74,43 @@ class Scoreboard():
         self.prep_score()
         self.prep_high_score()
         self.prep_level()
-        self.prep_ships()
+        self.prep_ships() # Должен быть вызван до _prep_score_frame, если рамка должна учитывать и жизни
 
-        # Русский комментарий: Теперь, когда текстовые rects доступны, масштабируем фон рамки, если он был загружен
-        if self.frame_loaded_successfully and self.original_score_frame_bg:
-            # Русский комментарий: Отступы внутри рамки до текста.
-            # frame_padding = 15  # px # Replaced by _SCORE_FRAME_PADDING
+        # Русский комментарий: Подготовка рамки для счета и уровня.
+        # Этот метод вызывается после prep_score и prep_level, чтобы их rect были доступны.
+        self._prep_score_frame()
 
-            # Русский комментарий: Определяем область, которую должна покрыть рамка.
-            # Начнем с self.score_rect.
-            if hasattr(self, 'score_rect'):
-                combined_rect_for_frame = self.score_rect.copy()
 
-                # Русский комментарий: Объединяем с self.high_score_rect, если он существует и должен быть внутри той же рамки.
-                # Это предполагает, что high_score находится рядом или над score.
-                # Если high_score рисуется в другом месте (например, строго по центру экрана),
-                # то его не нужно включать в combined_rect_for_frame для рамки счета.
-                # В текущей логике prep_high_score размещает его по центру вверху, а score справа вверху.
-                # Для общей рамки их нужно будет перепозиционировать или использовать отдельные рамки.
-                # Пока сделаем рамку только для score_rect и level_rect, так как они близко.
-                if hasattr(self, 'level_rect'):
-                    combined_rect_for_frame.union_ip(self.level_rect)
-                # if hasattr(self, 'high_score_rect'):
-                # combined_rect_for_frame.union_ip(self.high_score_rect) # Раскомментировать, если нужно включить и рекорд
+    def _prep_score_frame(self):
+        """Подготавливает фон (рамку) для отображения счета и уровня."""
+        if not (self.frame_loaded_successfully and self.original_score_frame_bg):
+            return # Рамка не загружена или не должна использоваться
 
-                target_frame_width = combined_rect_for_frame.width + 2 * _SCORE_FRAME_PADDING
-                target_frame_height = combined_rect_for_frame.height + 2 * _SCORE_FRAME_PADDING
+        # Убедимся, что score_rect и level_rect существуют
+        if not hasattr(self, 'score_rect') or not hasattr(self, 'level_rect'):
+            logger.warning("Scoreboard frame disabled because score_rect or level_rect was not available.")
+            self.frame_loaded_successfully = False # Отключаем рамку, если нет элементов для обрамления
+            return
 
-                self.scaled_score_frame_bg = pygame.transform.scale(
-                    self.original_score_frame_bg, (target_frame_width, target_frame_height))
-                self.score_frame_rect = self.scaled_score_frame_bg.get_rect()
-                # Русский комментарий: Центрируем рамку относительно объединенного текстового блока.
-                self.score_frame_rect.center = combined_rect_for_frame.center
-            else:
-                # Русский комментарий: score_rect еще не готов, это неожиданно. Отключаем рамку.
-                self.frame_loaded_successfully = False
-                logger.warning("Scoreboard frame disabled because score_rect was not available after prep_score().")
+        # Определяем область, которую должна покрыть рамка, на основе score_rect и level_rect.
+        # score_rect находится вверху, level_rect под ним.
+        # Их right атрибуты должны быть одинаковы для корректного выравнивания.
+        combined_rect_for_frame = self.score_rect.union(self.level_rect)
+
+        # Рассчитываем целевые размеры рамки с учетом отступов
+        target_frame_width = combined_rect_for_frame.width + 2 * _SCORE_FRAME_PADDING
+        target_frame_height = combined_rect_for_frame.height + 2 * _SCORE_FRAME_PADDING
+
+        try:
+            self.scaled_score_frame_bg = pygame.transform.scale(
+                self.original_score_frame_bg, (target_frame_width, target_frame_height))
+            self.score_frame_rect = self.scaled_score_frame_bg.get_rect()
+            # Центрируем рамку относительно объединенного текстового блока.
+            self.score_frame_rect.center = combined_rect_for_frame.center
+        except pygame.error as e:
+            logger.warning(f"Error scaling score frame background: {e}. Frame will be inactive.")
+            self.frame_loaded_successfully = False
+
 
     def prep_score(self):
         """Преобразует текущий счет в графическое изображение"""
@@ -166,48 +168,37 @@ class Scoreboard():
         self.level_rect.top = self.score_rect.bottom + self.settings.level_score_spacing
 
     def prep_ships(self):
-        # Русский комментарий: Готовит отображение количества жизней с использованием иконки сердца.
+        # Русский комментарий: Готовит отображение количества жизней с использованием иконок сердца.
+        self.life_icons_to_draw = [] # Список для хранения изображений и rect-ов иконок жизней
+        self.ships_group_fallback = Group() # Для старой логики, если иконки не загружены
+
         if self.heart_icon:
-            # Список для хранения того, что нужно отрисовать (иконка + текст)
-            self.ships_items_for_draw = []
+            # Отображаем N иконок сердец
+            start_x = self.settings.lives_display_padding_left
+            start_y = self.settings.lives_display_padding_top
 
-            # Иконка сердца
-            heart_rect = self.heart_icon.get_rect()
-            heart_rect.left = self.settings.lives_display_padding_left
-            heart_rect.top = self.settings.lives_display_padding_top
-            self.ships_items_for_draw.append(
-                {'image': self.heart_icon, 'rect': heart_rect})
-
-            # Текстовое представление количества жизней (например, "x3")
-            ships_str = f"x{self.stats.ships_left}"
-            # Используем тот же шрифт и цвет, что и для счета
-            # bg_color может быть None для прозрачности, но здесь всегда self.settings.bg_color
-            temp_ships_text_img = self.font.render(ships_str, True,
-                                                   self.text_color, self.settings.bg_color)
-            ships_text_img = temp_ships_text_img.convert()
-            ships_text_rect = ships_text_img.get_rect()
-            # Позиционируем текст справа от иконки сердца
-            ships_text_rect.left = heart_rect.right + _LIVES_ICON_TEXT_SPACING
-            ships_text_rect.centery = heart_rect.centery
-            self.ships_items_for_draw.append(
-                {'image': ships_text_img, 'rect': ships_text_rect})
-
+            for i in range(self.stats.ships_left):
+                icon_rect = self.heart_icon.get_rect()
+                icon_rect.left = start_x + i * (icon_rect.width + _LIVES_ICON_SPACING)
+                icon_rect.top = start_y
+                self.life_icons_to_draw.append({'image': self.heart_icon, 'rect': icon_rect})
         else:
             # Русский комментарий: Если иконка сердца не загружена, используем старую логику с кораблями
-            # Этот блок нужен, если self.heart_icon None, но self.ships должен быть атрибутом класса
-            if not hasattr(self, 'ships'):  # Инициализируем ships только если его нет
-                self.ships = Group()
-            else:
-                self.ships.empty()  # Очищаем, если уже существует
-
+            # Очищаем группу перед добавлением новых кораблей
+            self.ships_group_fallback.empty()
             for ship_number in range(self.stats.ships_left):
-                # Убедитесь, что класс Ship импортирован
-                ship = Ship(self.ai_game)
-                ship.rect.x = self.settings.lives_display_padding_left + \
-                    ship_number * ship.rect.width
+                ship = Ship(self.ai_game) # Класс Ship должен быть импортирован
+                # Масштабируем корабли для UI, если они слишком большие
+                # Предполагаем, что иконка сердца имеет размер _UI_ICON_SIZE,
+                # поэтому корабли тоже должны быть примерно такого размера.
+                # Это можно сделать, передав специальный флаг в Ship или отмасштабировав здесь.
+                # Пока оставим оригинальный размер корабля из Ship, но это может потребовать доработки.
+                # ship.image = pygame.transform.scale(ship.image, _UI_ICON_SIZE) # Пример масштабирования
+                # ship.rect = ship.image.get_rect()
+
+                ship.rect.x = self.settings.lives_display_padding_left + ship_number * (ship.rect.width + _LIVES_ICON_SPACING)
                 ship.rect.y = self.settings.lives_display_padding_top
-                self.ships.add(ship)
-            self.ships_items_for_draw = None  # Явный признак, что используем старую систему
+                self.ships_group_fallback.add(ship)
 
     def check_high_score(self):
         """Проверяет появился ли новый рекорд"""
@@ -225,10 +216,10 @@ class Scoreboard():
         self.screen.blit(self.score_image, self.score_rect)
         self.screen.blit(self.high_score_image, self.high_score_rect)
         self.screen.blit(self.level_image, self.level_rect)
-        # Русский комментарий: Отображение жизней (иконки или корабли)
-        if hasattr(self, 'ships_items_for_draw') and self.ships_items_for_draw is not None and self.heart_icon:
-            for item in self.ships_items_for_draw:
+
+        # Русский комментарий: Отображение жизней
+        if self.heart_icon and self.life_icons_to_draw:
+            for item in self.life_icons_to_draw:
                 self.screen.blit(item['image'], item['rect'])
-        # Используем старую систему с кораблями, если иконки нет или ships_items_for_draw is None
-        elif hasattr(self, 'ships'):
-            self.ships.draw(self.screen)
+        elif not self.heart_icon and hasattr(self, 'ships_group_fallback'): # Используем старую систему с кораблями, если иконки нет
+            self.ships_group_fallback.draw(self.screen)
