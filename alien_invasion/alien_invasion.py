@@ -240,11 +240,19 @@ class AlienInvasion:
         # Группа для процедурных космических объектов (планеты, галактики)
         self.space_objects = pygame.sprite.Group()
         self.last_space_object_spawn_time = pygame.time.get_ticks()
-        # Интервал появления космических объектов
-        self.space_object_spawn_interval_min = (_SPACE_OBJECT_BASE_INTERVAL_S - _SPACE_OBJECT_INTERVAL_VARIANCE_S) * _MILLISECONDS_PER_SECOND
-        self.space_object_spawn_interval_max = (_SPACE_OBJECT_BASE_INTERVAL_S + _SPACE_OBJECT_INTERVAL_VARIANCE_S) * _MILLISECONDS_PER_SECOND
+        # Интервал появления космических объектов (теперь читается из settings)
+        self.space_object_spawn_interval_min = (self.settings.space_object_base_interval_s - self.settings.space_object_interval_variance_s) * _MILLISECONDS_PER_SECOND
+        self.space_object_spawn_interval_max = (self.settings.space_object_base_interval_s + self.settings.space_object_interval_variance_s) * _MILLISECONDS_PER_SECOND
         self.current_spawn_interval = random.randint(
             self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
+        # Убедимся, что минимальный интервал не отрицательный
+        if self.space_object_spawn_interval_min < 0:
+            self.space_object_spawn_interval_min = 0
+            logger.warning("Минимальный интервал появления космических объектов был отрицательным, исправлено на 0.")
+        if self.current_spawn_interval < 0 : # Если вдруг из-за отрицательного min выбран отрицательный current
+            self.current_spawn_interval = random.randint(0, self.space_object_spawn_interval_max)
+
+
 
         # --- Кэширование Surface для текста "Пауза" ---
         # Создаем Surface для текста "Пауза" один раз при инициализации для оптимизации.
@@ -844,25 +852,31 @@ class AlienInvasion:
         # Пытается создать новый процедурный космический объект (планету/галактику), если пришло время.
         current_time = pygame.time.get_ticks()
         if current_time - self.last_space_object_spawn_time > self.current_spawn_interval:
-            # Если есть доступные спрайты планет/галактик.
-            if self.settings.planet_sprite_paths:
-                image_path = random.choice(self.settings.planet_sprite_paths)
+            # Проверяем, не превышено ли максимальное количество объектов на экране
+            if len(self.space_objects) < self.settings.max_space_objects:
+                # Если есть доступные спрайты планет/галактик.
+                if self.settings.planet_sprite_paths:
+                    image_path = random.choice(self.settings.planet_sprite_paths)
 
-                new_object = SpaceObject(
-                    screen_width=self.settings.screen_width,
-                    screen_height=self.settings.screen_height,
-                    image_path=image_path,
-                    # target_size_ratio_range, speed, fade_duration_ms - используются значения по умолчанию из SpaceObject.
-                )
-                self.space_objects.add(new_object)
-                logger.debug("Spawned SpaceObject: %s", image_path)
+                    new_object = SpaceObject(
+                        screen_width=self.settings.screen_width,
+                        screen_height=self.settings.screen_height,
+                        image_path=image_path,
+                        fade_duration_ms=self.settings.space_object_fade_duration_ms
+                    )
+                    self.space_objects.add(new_object)
+                    logger.debug("Spawned SpaceObject: %s. Total: %d", image_path, len(self.space_objects))
 
-                self.last_space_object_spawn_time = current_time
-                # Установка нового случайного интервала для следующего объекта.
-                self.current_spawn_interval = random.randint(
-                    self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
+                    self.last_space_object_spawn_time = current_time
+                    # Установка нового случайного интервала для следующего объекта.
+                    self.current_spawn_interval = random.randint(
+                        self.space_object_spawn_interval_min, self.space_object_spawn_interval_max)
+                    if self.current_spawn_interval < 0 : # Дополнительная проверка
+                         self.current_spawn_interval = random.randint(0, self.space_object_spawn_interval_max)
+                # else:
+                    # logger.debug("Нет доступных спрайтов для космических объектов.") # Для отладки
             # else:
-                # logger.debug("Нет доступных спрайтов для космических объектов.") # Для отладки
+                # logger.debug(f"Max space objects reached ({self.settings.max_space_objects}), not spawning.")
 
 
 if __name__ == '__main__':
