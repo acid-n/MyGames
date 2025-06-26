@@ -12,7 +12,7 @@ from alien_invasion.settings import Settings
 from alien_invasion.ship import Ship
 from alien_invasion.alien import Alien
 from alien_invasion.powerup import PowerUp
-from alien_invasion.alien_invasion import AlienInvasion # Для инициализации ai_game
+from alien_invasion.alien_invasion import AlienInvasion, _EXPLOSION_SOUND_INDEX_START, _EXPLOSION_SOUND_INDEX_END # Для инициализации ai_game и констант звуков
 
 
 class TestAssetScaling(unittest.TestCase):
@@ -238,6 +238,100 @@ class TestAssetScaling(unittest.TestCase):
     def tearDownClass(cls):
         """Завершение работы Pygame после всех тестов."""
         pygame.quit()
+
+
+class TestSoundAssets(unittest.TestCase):
+    """Тесты для проверки корректной загрузки звуковых ассетов."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Инициализация Pygame.mixer и Settings."""
+        os.environ['SDL_AUDIODRIVER'] = 'dummy' # Убедимся, что аудиодрайвер dummy
+        pygame.mixer.pre_init(44100, -16, 2, 512) # Параметры для dummy
+        pygame.init() # Pygame.init() также инициализирует mixer, если он не был инициализирован
+
+        # Проверим, инициализирован ли микшер, если нет - инициализируем явно
+        if not pygame.mixer.get_init():
+            try:
+                pygame.mixer.init()
+            except pygame.error as e:
+                # Если и тут не удалось, возможно, тесты звука не смогут пройти
+                print(f"Не удалось инициализировать pygame.mixer в setUpClass: {e}")
+                # Можно установить флаг, чтобы пропускать тесты, или позволить им упасть
+                cls.mixer_initialized = False
+            else:
+                cls.mixer_initialized = True
+        else:
+            cls.mixer_initialized = True
+
+        cls.settings = Settings()
+
+    def setUp(self):
+        """Пропускаем тест, если микшер не инициализирован."""
+        if not self.mixer_initialized:
+            self.skipTest("Pygame mixer не был успешно инициализирован.")
+
+    def _check_sound_loaded(self, sound_path, sound_attribute_name=""):
+        """Вспомогательный метод для проверки загрузки одного звукового файла."""
+        if not os.path.exists(sound_path):
+            self.skipTest(f"Звуковой файл не найден: {sound_path}")
+
+        sound = None
+        try:
+            sound = pygame.mixer.Sound(sound_path)
+        except pygame.error as e:
+            self.fail(f"Ошибка загрузки звука '{sound_path}': {e}")
+
+        self.assertIsNotNone(sound, f"Звук '{sound_path}' не должен быть None после загрузки.")
+        self.assertIsInstance(sound, pygame.mixer.Sound, f"Объект для '{sound_path}' должен быть pygame.mixer.Sound.")
+        # Можно добавить проверку длительности, если она известна и важна
+        # self.assertGreater(sound.get_length(), 0, f"Длительность звука '{sound_path}' должна быть больше 0.")
+
+    def test_load_laser_sound(self):
+        """Тест: Загрузка звука лазера."""
+        self._check_sound_loaded(self.settings.sound_laser_path, "Laser Sound")
+
+    def test_load_explosion_sounds(self):
+        """Тест: Загрузка звуков взрыва (согласно измененной логике)."""
+        sound_paths_to_test = []
+        for i in range(_EXPLOSION_SOUND_INDEX_START, _EXPLOSION_SOUND_INDEX_END + 1):
+            path = self.settings.sound_explosion_pattern.format(i)
+            sound_paths_to_test.append(path)
+
+        if not sound_paths_to_test:
+            self.skipTest("Нет путей для звуков взрыва для тестирования (возможно, из-за _EXPLOSION_SOUND_INDEX).")
+
+        for path in sound_paths_to_test:
+            self._check_sound_loaded(path, f"Explosion Sound {path}")
+
+    def test_load_powerup_sound(self):
+        """Тест: Загрузка звука подбора бонуса."""
+        self._check_sound_loaded(self.settings.sound_powerup_path, "Powerup Sound")
+
+    def test_load_shield_recharge_sound(self):
+        """Тест: Загрузка звука перезарядки щита."""
+        self._check_sound_loaded(self.settings.sound_shield_recharge_path, "Shield Recharge Sound")
+
+    # Тест для фоновой музыки может быть добавлен аналогично, если используется pygame.mixer.music
+    # def test_load_background_music(self):
+    #     """Тест: Загрузка фоновой музыки."""
+    #     music_path = self.settings.music_background_path
+    #     if not os.path.exists(music_path):
+    #         self.skipTest(f"Файл фоновой музыки не найден: {music_path}")
+    #     try:
+    #         pygame.mixer.music.load(music_path)
+    #         # pygame.mixer.music.unload() # Освобождаем, если нужно
+    #     except pygame.error as e:
+    #         self.fail(f"Ошибка загрузки фоновой музыки '{music_path}': {e}")
+
+
+    @classmethod
+    def tearDownClass(cls):
+        """Завершение работы Pygame.mixer и Pygame после всех тестов."""
+        if pygame.mixer.get_init(): # Проверяем, был ли микшер инициализирован
+            pygame.mixer.quit()
+        pygame.quit()
+
 
 if __name__ == '__main__':
     unittest.main()

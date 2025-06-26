@@ -16,6 +16,8 @@ class SpaceObject(pygame.sprite.Sprite):
 
         self.screen_width = screen_width
         self.screen_height = screen_height
+        # Инициализация screen_rect для использования в методе update
+        self.screen_rect = pygame.Rect(0, 0, screen_width, screen_height)
         self.fade_duration_ms = fade_duration_ms
 
         try:
