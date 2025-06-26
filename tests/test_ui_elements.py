@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from alien_invasion.settings import Settings
 from alien_invasion.game_stats import GameStats
-from alien_invasion.scoreboard import Scoreboard, _UI_ICON_SIZE, _SCORE_FRAME_PADDING
+from alien_invasion.scoreboard import Scoreboard, _UI_ICON_SIZE, _SCORE_FRAME_PADDING, _LIVES_ICON_SPACING
 from alien_invasion.ship import Ship # Нужен для fallback в Scoreboard
 
 # Отключаем звук для тестов, если он инициализируется где-то глобально
@@ -85,12 +85,21 @@ class TestScoreboardUI(unittest.TestCase):
         self.assertTrue(hasattr(self.scoreboard, 'life_icons_to_draw'), "Scoreboard должен иметь атрибут 'life_icons_to_draw'.")
         self.assertEqual(len(self.scoreboard.life_icons_to_draw), self.stats.ships_left, "Количество иконок жизней должно соответствовать ships_left.")
 
-        if self.stats.ships_left > 1:
-            icon1_rect = self.scoreboard.life_icons_to_draw[0]['rect']
-            icon2_rect = self.scoreboard.life_icons_to_draw[1]['rect']
-            # Проверяем, что вторая иконка смещена вправо относительно первой
-            self.assertGreater(icon2_rect.left, icon1_rect.left, "Вторая иконка жизни должна быть правее первой.")
-            self.assertEqual(icon1_rect.top, icon2_rect.top, "Иконки жизней должны быть на одном уровне по вертикали.")
+        if self.stats.ships_left > 0:
+            first_icon_rect = self.scoreboard.life_icons_to_draw[0]['rect']
+            expected_x = self.settings.lives_display_padding_left
+            expected_y = self.settings.lives_display_padding_top
+            self.assertEqual(first_icon_rect.left, expected_x, f"Первая иконка жизни должна быть в x={expected_x}.")
+            self.assertEqual(first_icon_rect.top, expected_y, f"Первая иконка жизни должна быть в y={expected_y}.")
+
+            if self.stats.ships_left > 1:
+                icon1_rect = self.scoreboard.life_icons_to_draw[0]['rect']
+                icon2_rect = self.scoreboard.life_icons_to_draw[1]['rect']
+                # Проверяем, что вторая иконка смещена вправо относительно первой
+                expected_spacing = icon1_rect.width + _LIVES_ICON_SPACING # Используем импортированную константу
+                self.assertEqual(icon2_rect.left, icon1_rect.left + expected_spacing,
+                                 f"Вторая иконка жизни должна быть смещена на {expected_spacing} пикселей вправо от первой.")
+                self.assertEqual(icon1_rect.top, icon2_rect.top, "Иконки жизней должны быть на одном уровне по вертикали.")
 
     def test_score_frame_preparation(self):
         """Тест: Подготовка рамки для счета и уровня."""
@@ -135,6 +144,53 @@ class TestScoreboardUI(unittest.TestCase):
         self.assertTrue(hasattr(scoreboard_no_icon, 'ships_group_fallback'), "Scoreboard должен иметь атрибут 'ships_group_fallback'.")
         self.assertEqual(len(scoreboard_no_icon.ships_group_fallback), self.stats.ships_left, "Количество кораблей в fallback-группе должно соответствовать ships_left.")
         self.assertIsInstance(scoreboard_no_icon.ships_group_fallback.sprites()[0], Ship, "Элементы в fallback-группе должны быть экземплярами Ship.")
+
+    def test_score_frame_no_overflow_with_large_score(self):
+        """Тест: Рамка счета корректно обрамляет текст даже при большом значении счета."""
+        if not self.scoreboard.frame_loaded_successfully:
+            self.skipTest(f"Ассет рамки счета не найден или не загружен ({self.settings.ui_score_frame_bg_path}), тест переполнения рамки пропускается.")
+
+        self.stats.score = 9999999 # Большой счет
+        self.stats.level = 88 # Двузначный уровень для проверки combined_rect
+        self.scoreboard.prep_score() # Это вызовет _prep_score_frame внутри
+        self.scoreboard.prep_level() # Это также вызовет _prep_score_frame
+
+        score_rect = self.scoreboard.score_rect
+        level_rect = self.scoreboard.level_rect
+        frame_rect = self.scoreboard.score_frame_rect
+
+        # Проверяем, что рамка существует
+        self.assertIsNotNone(frame_rect, "Рамка счета (score_frame_rect) не должна быть None.")
+
+        # 1. Проверяем, что текст счета полностью внутри рамки с учетом верхнего и правого отступов
+        # Правый край текста должен быть левее или равен правому краю рамки минус отступ
+        self.assertLessEqual(score_rect.right, frame_rect.right - _SCORE_FRAME_PADDING,
+                             "Правый край текста счета выходит за рамку или отсутствует правый отступ.")
+        # Левый край текста должен быть правее или равен левому краю рамки плюс отступ
+        self.assertGreaterEqual(score_rect.left, frame_rect.left + _SCORE_FRAME_PADDING,
+                                "Левый край текста счета выходит за рамку или отсутствует левый отступ.")
+        # Верхний край текста счета должен быть ниже или равен верхнему краю рамки плюс отступ
+        self.assertGreaterEqual(score_rect.top, frame_rect.top + _SCORE_FRAME_PADDING,
+                               "Верхний край текста счета выходит за рамку или отсутствует верхний отступ.")
+
+        # 2. Проверяем, что текст уровня полностью внутри рамки с учетом нижнего и правого отступов
+        self.assertLessEqual(level_rect.right, frame_rect.right - _SCORE_FRAME_PADDING,
+                             "Правый край текста уровня выходит за рамку или отсутствует правый отступ.")
+        self.assertGreaterEqual(level_rect.left, frame_rect.left + _SCORE_FRAME_PADDING,
+                                "Левый край текста уровня выходит за рамку или отсутствует левый отступ.")
+        # Нижний край текста уровня должен быть выше или равен нижнему краю рамки минус отступ
+        self.assertLessEqual(level_rect.bottom, frame_rect.bottom - _SCORE_FRAME_PADDING,
+                             "Нижний край текста уровня выходит за рамку или отсутствует нижний отступ.")
+
+        # 3. Дополнительная проверка: объединенный rect текста также должен быть внутри
+        combined_text_rect = score_rect.union(level_rect)
+        self.assertTrue(frame_rect.contains(combined_text_rect),
+                        "Объединенный Rect текста счета и уровня должен полностью содержаться в рамке.")
+
+        # 4. Проверка центрирования (как в test_score_frame_preparation)
+        self.assertEqual(frame_rect.center, combined_text_rect.center,
+                         "Рамка счета должна быть центрирована относительно объединенного текстового блока.")
+
 
     @classmethod
     def tearDownClass(cls):

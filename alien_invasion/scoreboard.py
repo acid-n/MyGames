@@ -105,8 +105,52 @@ class Scoreboard():
             self.scaled_score_frame_bg = pygame.transform.scale(
                 self.original_score_frame_bg, (target_frame_width, target_frame_height))
             self.score_frame_rect = self.scaled_score_frame_bg.get_rect()
-            # Центрируем рамку относительно объединенного текстового блока.
+
+            # Выравниваем рамку так, чтобы она обрамляла combined_rect_for_frame с учетом padding.
+            # combined_rect_for_frame уже содержит score_rect и level_rect.
+            # Рамка должна начинаться на _SCORE_FRAME_PADDING левее самого левого элемента текста
+            # и на _SCORE_FRAME_PADDING выше самого верхнего элемента текста.
+            self.score_frame_rect.left = combined_rect_for_frame.left - _SCORE_FRAME_PADDING
+            self.score_frame_rect.top = combined_rect_for_frame.top - _SCORE_FRAME_PADDING
+
+            # Убедимся, что ширина и высота рамки также учитывают паддинг с обеих сторон
+            # target_frame_width и target_frame_height уже включают 2 * _SCORE_FRAME_PADDING
+            # поэтому self.score_frame_rect.width и self.score_frame_rect.height должны быть равны им.
+            # Масштабирование уже учло это. Перепроверим логику позиционирования.
+
+            # Правильнее будет установить center или topleft для score_frame_rect,
+            # если target_frame_width/height уже включают паддинги.
+            # Если self.scaled_score_frame_bg имеет размеры target_frame_width/height,
+            # то self.score_frame_rect (полученный из get_rect()) будет иметь эти же размеры.
+            # Нам нужно, чтобы combined_rect_for_frame.center был равен self.score_frame_rect.center.
+            # Это обеспечит, что текстовый блок будет центрирован внутри рамки.
             self.score_frame_rect.center = combined_rect_for_frame.center
+            # Это оригинальная логика, и она должна работать, если target_frame_width/height
+            # рассчитываются правильно (текст + 2*padding).
+
+            # Проблема может быть в том, что combined_rect_for_frame.right используется в prep_score и prep_level
+            # для выравнивания текста, а затем этот же right используется для рамки.
+
+            # Давайте уточним:
+            # 1. score_rect и level_rect выровнены по правому краю (self.score_rect.right, self.level_rect.right).
+            # 2. combined_rect_for_frame.right будет равен self.score_rect.right.
+            # 3. target_frame_width = combined_rect_for_frame.width + 2 * _SCORE_FRAME_PADDING.
+            # 4. self.score_frame_rect.width = target_frame_width.
+            # 5. Если self.score_frame_rect.center = combined_rect_for_frame.center, то
+            #    правый край рамки будет: combined_rect_for_frame.centerx + target_frame_width / 2.
+            #    А правый край текста: combined_rect_for_frame.centerx + combined_rect_for_frame.width / 2.
+            #    Разница между правым краем рамки и правым краем текста должна быть _SCORE_FRAME_PADDING.
+            #    (target_frame_width / 2) - (combined_rect_for_frame.width / 2)
+            #    = (combined_rect_for_frame.width + 2 * _SCORE_FRAME_PADDING) / 2 - combined_rect_for_frame.width / 2
+            #    = combined_rect_for_frame.width / 2 + _SCORE_FRAME_PADDING - combined_rect_for_frame.width / 2
+            #    = _SCORE_FRAME_PADDING.
+            # Это означает, что оригинальная логика центрирования рамки должна обеспечивать правильный правый отступ.
+            # Проблема переполнения, скорее всего, была исключительно из-за того, что _prep_score_frame
+            # не вызывался после обновления текста счета.
+
+            # Оставим self.score_frame_rect.center = combined_rect_for_frame.center, так как математически это верно.
+            # Главное, что _prep_score_frame теперь вызывается при каждом обновлении счета/уровня.
+
         except pygame.error as e:
             logger.warning(f"Error scaling score frame background: {e}. Frame will be inactive.")
             self.frame_loaded_successfully = False
@@ -133,6 +177,7 @@ class Scoreboard():
         self.score_rect = self.score_image.get_rect()
         self.score_rect.right = self.screen_rect.right - padding_x
         self.score_rect.top = padding_y
+        self._prep_score_frame() # Обновляем рамку после изменения счета
 
     def prep_high_score(self):
         """Преобразует рекордный счет в графическое изображение"""
@@ -166,6 +211,7 @@ class Scoreboard():
         self.level_rect = self.level_image.get_rect()
         self.level_rect.right = self.score_rect.right
         self.level_rect.top = self.score_rect.bottom + self.settings.level_score_spacing
+        self._prep_score_frame() # Обновляем рамку после изменения уровня
 
     def prep_ships(self):
         # Русский комментарий: Готовит отображение количества жизней с использованием иконок сердца.

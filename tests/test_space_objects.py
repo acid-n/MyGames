@@ -167,6 +167,14 @@ class TestSpaceObject(unittest.TestCase):
         # В данном случае, после update() с alpha=0 и за экраном, self.space_object.alive() должно вернуть False.
         self.assertFalse(self.space_object.alive(), "Объект должен быть 'убит' (не alive), если он за экраном и alpha=0 после update.")
 
+    def test_screen_rect_initialization(self):
+        """Тест: Корректная инициализация атрибута screen_rect."""
+        self.assertTrue(hasattr(self.space_object, 'screen_rect'), "Экземпляр SpaceObject должен иметь атрибут 'screen_rect'.")
+        self.assertIsInstance(self.space_object.screen_rect, pygame.Rect, "Атрибут 'screen_rect' должен быть экземпляром pygame.Rect.")
+        self.assertEqual(self.space_object.screen_rect.width, self.screen_width,
+                         f"Ширина screen_rect ({self.space_object.screen_rect.width}) должна соответствовать переданной screen_width ({self.screen_width}).")
+        self.assertEqual(self.space_object.screen_rect.height, self.screen_height,
+                         f"Высота screen_rect ({self.space_object.screen_rect.height}) должна соответствовать переданной screen_height ({self.screen_height}).")
 
     @classmethod
     def tearDownClass(cls):
