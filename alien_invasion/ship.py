@@ -10,7 +10,7 @@ _FALLBACK_SHIP_SIZE = (64, 64)
 _FALLBACK_SHIP_COLOR = (0, 0, 255)  # Blue
 _SHIELD_OVERLAY_COLOR = (0, 100, 255, 90)  # Bright blue, ~35% transparent
 _SHIELD_OUTLINE_THICKNESS = 2
-_DOUBLE_FIRE_EFFECT_COLOR = (255, 165, 0) # Orange
+_DOUBLE_FIRE_EFFECT_COLOR = (255, 165, 0)  # Orange
 _DOUBLE_FIRE_MARKER_RADIUS = 3
 
 
@@ -27,23 +27,28 @@ class Ship(Sprite):
         # Загрузка изображения корабля и получение его rect
         try:
             self.original_image = pygame.image.load(
-                self.settings.ship_image_path).convert_alpha()
+                self.settings.ship_image_path
+            ).convert_alpha()
         except pygame.error as e:
-            logger.warning("Не удалось загрузить спрайт корабля: %s - %s. Using fallback.",
-                           self.settings.ship_image_path, e)
+            logger.warning(
+                "Не удалось загрузить спрайт корабля: %s - %s. Using fallback.",
+                self.settings.ship_image_path,
+                e,
+            )
             # Загружаем простой прямоугольник как fallback
             self.original_image = pygame.Surface(_FALLBACK_SHIP_SIZE)
             self.original_image.fill(_FALLBACK_SHIP_COLOR)  # Синий прямоугольник
 
         self.original_image = pygame.transform.scale(
-            self.original_image, (self.settings.ship_display_width, self.settings.ship_display_height))
+            self.original_image,
+            (self.settings.ship_display_width, self.settings.ship_display_height),
+        )
 
         # Создаем варианты спрайта
         self.image_normal = self.original_image
         self.image_shielded = self._create_shielded_image(self.original_image)
         # Может быть таким же, как normal, если нет спецэффекта
-        self.image_double_fire = self._create_double_fire_image(
-            self.original_image)
+        self.image_double_fire = self._create_double_fire_image(self.original_image)
 
         self.image = self.image_normal  # Текущее изображение корабля
         self.rect = self.image.get_rect()
@@ -82,7 +87,8 @@ class Ship(Sprite):
 
     def blitme(self):
         """Рисует корабль в текущей позиции, используя актуальный спрайт (self.image),
-        который может меняться в зависимости от активных эффектов (щит, двойной выстрел)."""
+        который может меняться в зависимости от активных эффектов (щит, двойной выстрел).
+        """
         self.screen.blit(self.image, self.rect)
         # Старая отрисовка щита как отдельного прямоугольника удалена,
         # так как теперь щит - это вариант спрайта self.image_shielded.
@@ -120,7 +126,9 @@ class Ship(Sprite):
         # Русский комментарий: Обновляет изображение корабля в зависимости от активных эффектов.
         if self.shield_active:
             self.image = self.image_shielded
-        elif self.double_fire_active:  # Двойной выстрел менее приоритетен, чем щит визуально
+        elif (
+            self.double_fire_active
+        ):  # Двойной выстрел менее приоритетен, чем щит визуально
             self.image = self.image_double_fire
         else:
             self.image = self.image_normal
@@ -140,10 +148,18 @@ class Ship(Sprite):
     def _check_effects_duration(self):
         # Русский комментарий: Проверяет длительность активных эффектов.
         current_time = pygame.time.get_ticks()
-        if self.shield_active and current_time - self.shield_activation_time > self.settings.shield_duration:
+        if (
+            self.shield_active
+            and current_time - self.shield_activation_time
+            > self.settings.shield_duration
+        ):
             self.shield_active = False
             logger.debug("Щит деактивирован (время вышло)")
 
-        if self.double_fire_active and current_time - self.double_fire_activation_time > self.settings.double_fire_duration:
+        if (
+            self.double_fire_active
+            and current_time - self.double_fire_activation_time
+            > self.settings.double_fire_duration
+        ):
             self.double_fire_active = False
             logger.debug("Двойной выстрел деактивирован (время вышло)")
